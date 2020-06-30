@@ -251,13 +251,14 @@ public class SrsFlvMuxer {
 
     int dts = akamaiTs ? (int)((System.nanoTime() / 1000 - startTs) / 1000) : frame.dts;
     if (frame.is_video()) {
+      publisher.publishVideoData(frame.flvTag.array(), frame.flvTag.size(), dts);
       if (frame.is_keyframe()) {
         Log.i(TAG,
             String.format("worker: send frame type=%d, dts=%d, size=%dB", frame.type, dts,
                 frame.flvTag.array().length));
+      } else {
+        mVideoAllocator.release(frame.flvTag);
       }
-      publisher.publishVideoData(frame.flvTag.array(), frame.flvTag.size(), dts);
-      mVideoAllocator.release(frame.flvTag);
       mVideoFramesSent++;
     } else if (frame.is_audio()) {
       publisher.publishAudioData(frame.flvTag.array(), frame.flvTag.size(), dts);
@@ -280,6 +281,9 @@ public class SrsFlvMuxer {
         }
         reTries = numRetry;
         connectCheckerRtmp.onConnectionSuccessRtmp();
+        SrsFlvFrame lastSentIFrame = null;
+        long lastVideoFrameSentMs = 0;
+        long lastVideoFrameSentDts = 0;
         while (!Thread.interrupted()) {
           try {
             SrsFlvFrame frame = mFlvAudioTagCache.poll(1, TimeUnit.MILLISECONDS);
@@ -288,8 +292,28 @@ public class SrsFlvMuxer {
             }
 
             frame = mFlvVideoTagCache.poll(1, TimeUnit.MILLISECONDS);
-            if (frame != null) {
-              sendFlvTag(frame);
+            if (frame == null) {
+              if (lastSentIFrame != null) {
+                int diff = (int)(System.currentTimeMillis() - lastVideoFrameSentMs);
+                if (diff > 1000) {
+                  lastSentIFrame.dts = (int)(diff + lastVideoFrameSentDts);
+                  lastVideoFrameSentDts = lastSentIFrame.dts;
+                  lastVideoFrameSentMs = System.currentTimeMillis();
+                  sendFlvTag(lastSentIFrame);
+                }
+              }
+            } else {
+              if (frame.is_video()) {
+                if (frame.is_keyframe()) {
+                  if (lastSentIFrame != null) {
+                    mVideoAllocator.release(lastSentIFrame.flvTag);
+                  }
+                  lastSentIFrame = frame;
+                }
+                lastVideoFrameSentDts = frame.dts;
+                lastVideoFrameSentMs = System.currentTimeMillis();
+                sendFlvTag(frame);
+              }
             }
           } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
