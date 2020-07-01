@@ -281,7 +281,7 @@ public class SrsFlvMuxer {
         }
         reTries = numRetry;
         connectCheckerRtmp.onConnectionSuccessRtmp();
-        SrsFlvFrame lastSentIFrame = null;
+        SrsFlvFrame lastKeyIFrame = null;
         long lastVideoFrameSentMs = 0;
         long lastVideoFrameSentDts = 0;
         while (!Thread.interrupted()) {
@@ -293,22 +293,22 @@ public class SrsFlvMuxer {
 
             frame = mFlvVideoTagCache.poll(1, TimeUnit.MILLISECONDS);
             if (frame == null) {
-              if (lastSentIFrame != null) {
+              if (lastKeyIFrame != null) {
                 int diff = (int)(System.currentTimeMillis() - lastVideoFrameSentMs);
                 if (diff > 1000) {
-                  lastSentIFrame.dts = (int)(diff + lastVideoFrameSentDts);
-                  lastVideoFrameSentDts = lastSentIFrame.dts;
+                  lastKeyIFrame.dts = (int)(diff + lastVideoFrameSentDts);
+                  lastVideoFrameSentDts = lastKeyIFrame.dts;
                   lastVideoFrameSentMs = System.currentTimeMillis();
-                  sendFlvTag(lastSentIFrame);
+                  sendFlvTag(lastKeyIFrame);
                 }
               }
             } else {
               if (frame.is_video()) {
                 if (frame.is_keyframe()) {
-                  if (lastSentIFrame != null) {
-                    mVideoAllocator.release(lastSentIFrame.flvTag);
+                  if (lastKeyIFrame != null) {
+                    mVideoAllocator.release(lastKeyIFrame.flvTag);
                   }
-                  lastSentIFrame = frame;
+                  lastKeyIFrame = frame;
                 }
                 lastVideoFrameSentDts = frame.dts;
                 lastVideoFrameSentMs = System.currentTimeMillis();
