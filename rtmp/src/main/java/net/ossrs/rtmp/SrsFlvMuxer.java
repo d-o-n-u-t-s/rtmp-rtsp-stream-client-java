@@ -319,6 +319,9 @@ public class SrsFlvMuxer {
             Thread.currentThread().interrupt();
           }
         }
+        if (lastKeyIFrame != null) {
+          mVideoAllocator.release(lastKeyIFrame.flvTag);
+        }
       }
     });
     worker.start();
