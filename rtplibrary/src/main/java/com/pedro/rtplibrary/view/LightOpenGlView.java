@@ -145,6 +145,11 @@ public class LightOpenGlView extends OpenGlViewBase {
   }
 
   @Override
+  public void setMode(int mode) {
+
+  }
+
+  @Override
   public boolean isAAEnabled() {
     return false;
   }

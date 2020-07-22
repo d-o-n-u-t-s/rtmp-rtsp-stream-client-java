@@ -78,6 +78,8 @@ public interface GlInterface {
    */
   void setStreamRotation(int rotation);
 
+  void setMode(int mode);
+
   /**
    * When true, flips only the stream horizontally
    */

@@ -2,6 +2,7 @@ package com.pedro.rtplibrary.base;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.Configuration;
 import android.hardware.display.VirtualDisplay;
 import android.media.AudioAttributes;
 import android.media.AudioPlaybackCaptureConfiguration;
@@ -10,6 +11,7 @@ import android.media.MediaFormat;
 import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
 import android.os.Build;
+import android.util.Log;
 import android.view.Surface;
 import android.view.SurfaceView;
 import androidx.annotation.RequiresApi;
@@ -306,6 +308,11 @@ public abstract class DisplayBase implements GetAacData, GetVideoData, GetMicrop
       virtualDisplay =
           mediaProjection.createVirtualDisplay("Stream Display", videoEncoder.getWidth(),
               videoEncoder.getHeight(), dpi, 0, surface, null, null);
+    }
+    if (context.getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
+      glInterface.setMode(2);
+    } else {
+      glInterface.setMode(1);
     }
     microphoneManager.start();
   }

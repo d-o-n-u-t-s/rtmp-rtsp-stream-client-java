@@ -39,6 +39,7 @@ public class OffScreenGlThread
   private int encoderWidth, encoderHeight;
   private boolean loadAA = false;
   private int streamRotation;
+  private int mode = 1;
   private boolean muteVideo = false;
   private boolean isStreamHorizontalFlip = false;
   private boolean isStreamVerticalFlip = false;
@@ -150,6 +151,11 @@ public class OffScreenGlThread
   }
 
   @Override
+  public void setMode(int mode) {
+    this.mode = mode;
+  }
+
+  @Override
   public void setIsStreamHorizontalFlip(boolean flip) {
     isStreamHorizontalFlip = flip;
   }
@@ -212,17 +218,17 @@ public class OffScreenGlThread
           surfaceManager.makeCurrent();
           textureManager.updateFrame();
           textureManager.drawOffScreen();
-          textureManager.drawScreen(encoderWidth, encoderHeight, false, 2, 0, true, false, false);
+          textureManager.drawScreen(encoderWidth, encoderHeight, false, mode, 0, true, false, false);
           surfaceManager.swapBuffer();
 
           synchronized (sync) {
             if (surfaceManagerEncoder != null && !fpsLimiter.limitFPS()) {
               surfaceManagerEncoder.makeCurrent();
               if (muteVideo) {
-                textureManager.drawScreen(0, 0, false, 2, streamRotation, false,
+                textureManager.drawScreen(0, 0, false, mode, streamRotation, false,
                     isStreamVerticalFlip, isStreamHorizontalFlip);
               } else {
-                textureManager.drawScreen(encoderWidth, encoderHeight, false, 2, streamRotation,
+                textureManager.drawScreen(encoderWidth, encoderHeight, false, mode, streamRotation,
                     false, isStreamVerticalFlip, isStreamHorizontalFlip);
               }
               //Necessary use surfaceManagerEncoder because preview manager size in background is 1x1.

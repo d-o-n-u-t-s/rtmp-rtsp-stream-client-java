@@ -87,6 +87,11 @@ public class OpenGlView extends OpenGlViewBase {
     managerRender.setCameraRotation(rotation);
   }
 
+  @Override
+  public void setMode(int mode) {
+
+  }
+
   public boolean isKeepAspectRatio() {
     return keepAspectRatio;
   }
