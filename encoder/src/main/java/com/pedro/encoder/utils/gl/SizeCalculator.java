@@ -51,7 +51,7 @@ public class SizeCalculator {
       float[] MVPMatrix) {
     PointF scale;
     if (mode == 2 || mode == 3) { // stream rotation is enabled
-      scale = getScale(rotation, width, height, isPortrait, isPreview);
+      scale = getScale(rotation, width, height, isPortrait);
       if (!isPreview && !isPortrait) rotation += 90;
     } else {
       scale = new PointF(1f, 1f);
@@ -70,16 +70,23 @@ public class SizeCalculator {
     Matrix.rotateM(MVPMatrix, 0, rotation, 0f, 0f, -1f);
   }
 
-  private static PointF getScale(int rotation, int width, int height, boolean isPortrait,
-      boolean isPreview) {
+  private static PointF getScale(int rotation, int width, int height, boolean isPortrait) {
     float scaleX = 1f;
     float scaleY = 1f;
-    if (!isPreview) {
-      if (isPortrait && rotation != 0 && rotation != 180) { //portrait
-        final float adjustedWidth = width * (width / (float) height);
+    if (isPortrait) { // 縦方向で配信を開始した
+      if (rotation != 0 && rotation != 180) { //portrait
+        final float adjustedWidth = width * (height / (float) width);
         scaleY = adjustedWidth / height;
-      } else if (!isPortrait && rotation != 90 && rotation != 270) { //landscape
+      } else if (rotation != 90 && rotation != 270) { //landscape
         final float adjustedWidth = width * (width / (float) height);
+        scaleX = adjustedWidth / height;
+      }
+    } else { // 横方向で配信を開始した
+      if (rotation != 0 && rotation != 180) { //portrait
+        final float adjustedWidth = width * (width / (float) height);
+        scaleX = adjustedWidth / height;
+      } else if (rotation != 90 && rotation != 270) { //landscape
+        final float adjustedWidth = width * (height / (float) width);
         scaleY = adjustedWidth / height;
       }
     }
