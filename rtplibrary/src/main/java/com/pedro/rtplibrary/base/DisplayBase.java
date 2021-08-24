@@ -34,6 +34,9 @@ import com.pedro.rtplibrary.view.GlInterface;
 import com.pedro.rtplibrary.view.OffScreenGlThread;
 
 import java.io.FileDescriptor;
+
+import net.ossrs.rtmp.MediaProjectionCallback;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
@@ -64,6 +67,15 @@ public abstract class DisplayBase implements GetAacData, GetVideoData, GetMicrop
   private Intent data;
   protected RecordController recordController;
   private final FpsListener fpsListener = new FpsListener();
+  private MediaProjectionCallback mediaProjectionCallback;
+  private MediaProjection.Callback mediaProjectionStopCallback = new MediaProjection.Callback() {
+    @Override
+    public void onStop() {
+      if (mediaProjectionCallback != null) {
+        mediaProjectionCallback.onStop();
+      }
+    }
+  };
   private boolean audioInitialized = false;
 
   public DisplayBase(Context context, boolean useOpengl) {
@@ -116,6 +128,10 @@ public abstract class DisplayBase implements GetAacData, GetVideoData, GetMicrop
     fpsListener.setCallback(callback);
   }
 
+  public void setMediaProjectionCallback(MediaProjectionCallback callback) {
+    mediaProjectionCallback = callback;
+  }
+
   /**
    * Basic auth developed to work with Wowza. No tested with other server
    *
@@ -156,7 +172,7 @@ public abstract class DisplayBase implements GetAacData, GetVideoData, GetMicrop
   }
 
   public boolean prepareVideo(int width, int height, int fps, int bitrate, int rotation, int dpi) {
-    return prepareVideo(width, height, fps, bitrate, rotation, dpi, -1, -1, 2);
+    return prepareVideo(width, height, fps, bitrate, rotation, dpi, -1, -1, 1);
   }
 
   public boolean prepareVideo(int width, int height, int bitrate) {
@@ -375,6 +391,7 @@ public abstract class DisplayBase implements GetAacData, GetVideoData, GetMicrop
         (glInterface != null) ? glInterface.getSurface() : videoEncoder.getInputSurface();
     if (mediaProjection == null) {
       mediaProjection = mediaProjectionManager.getMediaProjection(resultCode, data);
+      mediaProjection.registerCallback(mediaProjectionStopCallback, null);
     }
     if (glInterface != null && videoEncoder.getRotation() == 90
         || videoEncoder.getRotation() == 270) {

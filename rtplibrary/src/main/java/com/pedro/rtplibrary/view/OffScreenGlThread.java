@@ -181,6 +181,11 @@ public class OffScreenGlThread
   }
 
   @Override
+  public boolean isPortrait() {
+    return managerRender.isPortrait();
+  }
+
+  @Override
   public void start() {
     synchronized (sync) {
       thread = new Thread(this);
@@ -226,7 +231,7 @@ public class OffScreenGlThread
           surfaceManager.makeCurrent();
           managerRender.updateFrame();
           managerRender.drawOffScreen();
-          managerRender.drawScreen(encoderWidth, encoderHeight, false, 0, 0, true, isPreviewVerticalFlip, isPreviewHorizontalFlip);
+          managerRender.drawScreen(encoderWidth, encoderHeight, false, 2, 0, true, false, false);
           surfaceManager.swapBuffer();
 
           synchronized (sync) {
@@ -234,13 +239,13 @@ public class OffScreenGlThread
               int w = muteVideo ? 0 : encoderWidth;
               int h = muteVideo ? 0 : encoderHeight;
               surfaceManagerEncoder.makeCurrent();
-              managerRender.drawScreen(w, h, false, 0,
+              managerRender.drawScreen(w, h, false, 2,
                   streamRotation, false, isStreamVerticalFlip, isStreamHorizontalFlip);
               surfaceManagerEncoder.swapBuffer();
             }
             if (takePhotoCallback != null && surfaceManagerPhoto.isReady()) {
               surfaceManagerPhoto.makeCurrent();
-              managerRender.drawScreen(encoderWidth, encoderHeight, false, 0,
+              managerRender.drawScreen(encoderWidth, encoderHeight, false, 2,
                   streamRotation, false, isStreamVerticalFlip, isStreamHorizontalFlip);
               takePhotoCallback.onTakePhoto(GlUtil.getBitmap(encoderWidth, encoderHeight));
               takePhotoCallback = null;

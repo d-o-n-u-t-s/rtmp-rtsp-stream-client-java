@@ -2,41 +2,42 @@ apply plugin: 'com.android.library'
 apply plugin: 'maven-publish'
 
 android {
-  compileSdkVersion 30
+    compileSdkVersion 30
 
-  defaultConfig {
-    minSdkVersion 16
-    targetSdkVersion 30
-    versionCode 207
-    versionName "2.0.7"
-  }
-  buildTypes {
-    release {
-      minifyEnabled false
-      consumerProguardFiles 'proguard-rules.pro'
+    defaultConfig {
+        minSdkVersion 16
+        targetSdkVersion 30
+        versionCode 207
+        versionName "2.0.7"
     }
-  }
-
-  afterEvaluate {
-    publishing {
-      publications {
-        // Creates a Maven publication called "release".
-        release(MavenPublication) {
-          // Applies the component for the release build variant.
-          from components.release
-
-          // You can then customize attributes of the publication as shown below.
-          groupId = "$library_group"
-          artifactId = "rtplibrary"
-          version = "$versionName"
+    buildTypes {
+        create("debugProguard") {
+            initWith(buildTypes.debug)
         }
-      }
+        release {
+            minifyEnabled false
+            consumerProguardFiles 'proguard-rules.pro'
+        }
     }
-  }
+
+    afterEvaluate {
+        publishing {
+            publications {
+                // Creates a Maven publication called "release".
+                release(MavenPublication) {
+                    // Applies the component for the release build variant.
+                    from components.release
+
+                    // You can then customize attributes of the publication as shown below.
+                    artifactId = "rtplibrary"
+                }
+            }
+        }
+    }
 }
 
 dependencies {
-  api project(':encoder')
-  api project(':rtmp')
-  api project(':rtsp')
+    api project(':encoder')
+    api project(':rtmp')
+    api project(':rtsp')
 }
