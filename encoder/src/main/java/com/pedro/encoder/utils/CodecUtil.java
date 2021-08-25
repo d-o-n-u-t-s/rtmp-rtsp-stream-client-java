@@ -322,6 +322,6 @@ public class CodecUtil {
     if (name.equalsIgnoreCase("aacencoder")) return false;
     // 一部エンコーダーで配信ができなかったため、該当エンコーダーのチェックを外す
     return (!name.equals("OMX.qcom.video.encoder.avc") &&
-            !name.equals("c2.qti.avc.encoder")) || !Build.MODEL.startsWith("Pixel 3");
+            !name.equals("c2.qti.avc.encoder")) || !Build.MODEL.startsWith("Pixel");
   }
 }
