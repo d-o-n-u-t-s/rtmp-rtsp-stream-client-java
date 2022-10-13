@@ -6,7 +6,6 @@ import android.graphics.SurfaceTexture;
 import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
@@ -67,6 +66,7 @@ import com.pedro.encoder.utils.gl.TranslateTo;
 import com.pedro.rtplibrary.rtsp.RtspCamera1;
 import com.pedro.rtplibrary.view.OpenGlView;
 import com.pedro.rtpstreamer.R;
+import com.pedro.rtpstreamer.utils.PathUtils;
 import com.pedro.rtsp.utils.ConnectCheckerRtsp;
 
 import java.io.File;
@@ -77,6 +77,8 @@ import java.util.Locale;
 
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
+
+import org.jetbrains.annotations.NotNull;
 
 /**
  * More documentation see:
@@ -94,8 +96,7 @@ public class OpenGlRtspActivity extends AppCompatActivity
   private EditText etUrl;
 
   private String currentDateAndTime = "";
-  private File folder = new File(Environment.getExternalStorageDirectory().getAbsolutePath()
-      + "/rtmp-rtsp-stream-client-java");
+  private File folder;
   private OpenGlView openGlView;
   private SpriteGestureController spriteGestureController = new SpriteGestureController();
 
@@ -104,6 +105,7 @@ public class OpenGlRtspActivity extends AppCompatActivity
     super.onCreate(savedInstanceState);
     getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     setContentView(R.layout.activity_open_gl);
+    folder = PathUtils.getRecordPath(this);
     openGlView = findViewById(R.id.surfaceView);
     button = findViewById(R.id.b_start_stop);
     button.setOnClickListener(this);
@@ -334,6 +336,10 @@ public class OpenGlRtspActivity extends AppCompatActivity
     } catch (IOException e) {
       Toast.makeText(this, e.getMessage(), Toast.LENGTH_SHORT).show();
     }
+  }
+
+  @Override
+  public void onConnectionStartedRtsp(@NotNull String rtspUrl) {
   }
 
   @Override

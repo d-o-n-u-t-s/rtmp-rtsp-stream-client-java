@@ -2,7 +2,6 @@ package com.pedro.rtpstreamer.surfacemodeexample;
 
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
@@ -13,14 +12,16 @@ import android.widget.Toast;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import com.pedro.encoder.input.video.CameraOpenException;
+import com.pedro.rtmp.utils.ConnectCheckerRtmp;
 import com.pedro.rtplibrary.rtmp.RtmpCamera2;
 import com.pedro.rtpstreamer.R;
+import com.pedro.rtpstreamer.utils.PathUtils;
+
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
-import net.ossrs.rtmp.ConnectCheckerRtmp;
 
 /**
  * More documentation see:
@@ -37,14 +38,14 @@ public class SurfaceModeRtmpActivity extends AppCompatActivity
   private EditText etUrl;
 
   private String currentDateAndTime = "";
-  private File folder = new File(Environment.getExternalStorageDirectory().getAbsolutePath()
-      + "/rtmp-rtsp-stream-client-java");
+  private File folder;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     setContentView(R.layout.activity_example);
+    folder = PathUtils.getRecordPath(this);
     SurfaceView surfaceView = findViewById(R.id.surfaceView);
     button = findViewById(R.id.b_start_stop);
     button.setOnClickListener(this);
@@ -57,6 +58,10 @@ public class SurfaceModeRtmpActivity extends AppCompatActivity
     rtmpCamera2 = new RtmpCamera2(surfaceView, this);
     rtmpCamera2.setReTries(10);
     surfaceView.getHolder().addCallback(this);
+  }
+
+  @Override
+  public void onConnectionStartedRtmp(String rtmpUrl) {
   }
 
   @Override
@@ -76,7 +81,7 @@ public class SurfaceModeRtmpActivity extends AppCompatActivity
       @Override
       public void run() {
         //Wait 5s and retry connect stream
-        if (rtmpCamera2.reTry(5000, reason)) {
+        if (rtmpCamera2.reTry(5000, reason, null)) {
           Toast.makeText(SurfaceModeRtmpActivity.this, "Retry", Toast.LENGTH_SHORT)
               .show();
         } else {

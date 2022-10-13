@@ -19,49 +19,29 @@ import com.pedro.encoder.utils.gl.GlUtil;
 @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
 public class SurfaceManager {
 
+  private static final String TAG = "SurfaceManager";
+
   private static final int EGL_RECORDABLE_ANDROID = 0x3142;
 
-  private EGLContext eglContext = null;
-  private EGLSurface eglSurface = null;
-  private EGLDisplay eglDisplay = null;
+  private EGLContext eglContext = EGL14.EGL_NO_CONTEXT;
+  private EGLSurface eglSurface = EGL14.EGL_NO_SURFACE;
+  private EGLDisplay eglDisplay = EGL14.EGL_NO_DISPLAY;
+  private volatile boolean isReady = false;
 
-  /**
-   * Creates an EGL context and an EGL surface.
-   */
-  public SurfaceManager(Surface surface, SurfaceManager manager) {
-    eglSetup(2, 2, surface, manager.eglContext);
-  }
-
-  public SurfaceManager(int width, int height, SurfaceManager manager) {
-    eglSetup(width, height, null, manager.eglContext);
-  }
-
-  /**
-   * Creates an EGL context and an EGL surface.
-   */
-  public SurfaceManager(Surface surface, EGLContext eglContext) {
-    eglSetup(2, 2, surface, eglContext);
-  }
-
-  /**
-   * Creates an EGL context and an EGL surface.
-   */
-  public SurfaceManager(Surface surface) {
-    eglSetup(2, 2, surface, null);
-  }
-
-  public SurfaceManager() {
-    eglSetup(2, 2, null, null);
+  public boolean isReady() {
+    return isReady;
   }
 
   public void makeCurrent() {
     if (!EGL14.eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext)) {
-      Log.e("Error", "eglMakeCurrent failed");
+      Log.e(TAG, "eglMakeCurrent failed");
     }
   }
 
   public void swapBuffer() {
-    EGL14.eglSwapBuffers(eglDisplay, eglSurface);
+    if (!EGL14.eglSwapBuffers(eglDisplay, eglSurface)) {
+      Log.e(TAG, "eglSwapBuffers failed");
+    }
   }
 
   /**
@@ -75,7 +55,11 @@ public class SurfaceManager {
   /**
    * Prepares EGL.  We want a GLES 2.0 context and a surface that supports recording.
    */
-  private void eglSetup(int width, int height, Surface surface, EGLContext eglSharedContext) {
+  public void eglSetup(int width, int height, Surface surface, EGLContext eglSharedContext) {
+    if (isReady) {
+      Log.e(TAG, "already ready, ignored");
+      return;
+    }
     eglDisplay = EGL14.eglGetDisplay(EGL14.EGL_DEFAULT_DISPLAY);
     if (eglDisplay == EGL14.EGL_NO_DISPLAY) {
       throw new RuntimeException("unable to get EGL14 display");
@@ -153,6 +137,28 @@ public class SurfaceManager {
       eglSurface = EGL14.eglCreateWindowSurface(eglDisplay, configs[0], surface, surfaceAttribs, 0);
     }
     GlUtil.checkEglError("eglCreateWindowSurface");
+    isReady = true;
+    Log.i(TAG, "GL initialized");
+  }
+
+  public void eglSetup(Surface surface, SurfaceManager manager) {
+    eglSetup(2, 2, surface, manager.eglContext);
+  }
+
+  public void eglSetup(int width, int height, SurfaceManager manager) {
+    eglSetup(width, height, null, manager.eglContext);
+  }
+
+  public void eglSetup(Surface surface, EGLContext eglContext) {
+    eglSetup(2, 2, surface, eglContext);
+  }
+
+  public void eglSetup(Surface surface) {
+    eglSetup(2, 2, surface, null);
+  }
+
+  public void eglSetup() {
+    eglSetup(2, 2, null, null);
   }
 
   /**
@@ -166,10 +172,14 @@ public class SurfaceManager {
       EGL14.eglDestroyContext(eglDisplay, eglContext);
       EGL14.eglReleaseThread();
       EGL14.eglTerminate(eglDisplay);
+      Log.i(TAG, "GL released");
+      eglDisplay = EGL14.EGL_NO_DISPLAY;
+      eglContext = EGL14.EGL_NO_CONTEXT;
+      eglSurface = EGL14.EGL_NO_SURFACE;
+      isReady = false;
+    } else {
+      Log.e(TAG, "GL already released");
     }
-    eglDisplay = EGL14.EGL_NO_DISPLAY;
-    eglContext = EGL14.EGL_NO_CONTEXT;
-    eglSurface = EGL14.EGL_NO_SURFACE;
   }
 
   public EGLContext getEglContext() {

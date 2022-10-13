@@ -5,7 +5,6 @@ import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import android.view.View;
@@ -17,6 +16,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 import com.pedro.encoder.input.decoder.AudioDecoderInterface;
 import com.pedro.encoder.input.decoder.VideoDecoderInterface;
+import com.pedro.rtmp.utils.ConnectCheckerRtmp;
 import com.pedro.rtplibrary.rtmp.RtmpFromFile;
 import com.pedro.rtpstreamer.R;
 import com.pedro.rtpstreamer.utils.PathUtils;
@@ -25,7 +25,6 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
-import net.ossrs.rtmp.ConnectCheckerRtmp;
 
 /**
  * More documentation see:
@@ -46,14 +45,14 @@ public class RtmpFromFileActivity extends AppCompatActivity
   private boolean touching = false;
 
   private String currentDateAndTime = "";
-  private File folder = new File(Environment.getExternalStorageDirectory().getAbsolutePath()
-      + "/rtmp-rtsp-stream-client-java");
+  private File folder;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     setContentView(R.layout.activity_from_file);
+    folder = PathUtils.getRecordPath(this);
     button = findViewById(R.id.b_start_stop);
     bSelectFile = findViewById(R.id.b_select_file);
     button.setOnClickListener(this);
@@ -82,6 +81,10 @@ public class RtmpFromFileActivity extends AppCompatActivity
       rtmpFromFile.stopStream();
       button.setText(getResources().getString(R.string.start_button));
     }
+  }
+
+  @Override
+  public void onConnectionStartedRtmp(String rtmpUrl) {
   }
 
   @Override

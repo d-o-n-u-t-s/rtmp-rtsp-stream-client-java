@@ -26,7 +26,6 @@ import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.SurfaceView;
 import android.view.TextureView;
-import android.view.View;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -66,11 +65,12 @@ public class Camera2ApiManager extends CameraDevice.StateCallback {
   private CameraCaptureSession cameraCaptureSession;
   private boolean prepared = false;
   private int cameraId = -1;
-  private boolean isFrontCamera = false;
+  private CameraHelper.Facing facing = Facing.BACK;
   private CaptureRequest.Builder builderInputSurface;
   private float fingerSpacing = 0;
   private float zoomLevel = 0f;
   private boolean lanternEnable = false;
+  private boolean videoStabilizationEnable = false;
   private boolean autoFocusEnabled = true;
   private boolean running = false;
   private int fps = 30;
@@ -79,9 +79,11 @@ public class Camera2ApiManager extends CameraDevice.StateCallback {
 
   //Face detector
   public interface FaceDetectorCallback {
-    void onGetFaces(Face[] faces);
+    void onGetFaces(Face[] faces, Rect scaleSensor, int sensorOrientation);
   }
 
+  private int sensorOrientation = 0;
+  private Rect faceSensorScale;
   private FaceDetectorCallback faceDetectorCallback;
   private boolean faceDetectionEnabled = false;
   private int faceDetectionMode;
@@ -253,6 +255,21 @@ public class Camera2ApiManager extends CameraDevice.StateCallback {
     }
   }
 
+  public void setCameraFacing(CameraHelper.Facing cameraFacing) {
+    try {
+      String cameraId = getCameraIdForFacing(cameraManager, cameraFacing);
+      if (cameraId != null) {
+        this.cameraId = Integer.parseInt(cameraId);
+      }
+    } catch (CameraAccessException e) {
+      Log.e(TAG, "Error", e);
+    }
+  }
+
+  public CameraHelper.Facing getCameraFacing() {
+    return facing;
+  }
+
   public Size[] getCameraResolutionsBack() {
     return getCameraResolutions(Facing.BACK);
   }
@@ -287,6 +304,65 @@ public class Camera2ApiManager extends CameraDevice.StateCallback {
     } catch (CameraAccessException e) {
       Log.e(TAG, "Error", e);
       return null;
+    }
+  }
+
+  public boolean enableVideoStabilization() {
+    CameraCharacteristics characteristics = getCameraCharacteristics();
+    if (characteristics == null) return false;
+    int[] modes = characteristics.get(CameraCharacteristics.CONTROL_AVAILABLE_VIDEO_STABILIZATION_MODES);
+    List<Integer> videoStabilizationList = new ArrayList<>();
+    for (int vsMode : modes) {
+      videoStabilizationList.add(vsMode);
+    }
+    if (!videoStabilizationList.contains(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_ON)) {
+      Log.e(TAG, "video stabilization unsupported");
+      return false;
+    }
+
+    if (builderInputSurface != null) {
+      builderInputSurface.set(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE,
+          CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_ON);
+      videoStabilizationEnable = true;
+    }
+    return videoStabilizationEnable;
+  }
+
+  public void disableVideoStabilization() {
+    CameraCharacteristics characteristics = getCameraCharacteristics();
+    if (characteristics == null) return;
+    int[] modes = characteristics.get(CameraCharacteristics.CONTROL_AVAILABLE_VIDEO_STABILIZATION_MODES);
+    List<Integer> videoStabilizationList = new ArrayList<>();
+    for (int vsMode : modes) {
+      videoStabilizationList.add(vsMode);
+    }
+    if (!videoStabilizationList.contains(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_ON)) {
+      Log.e(TAG, "video stabilization unsupported");
+      return;
+    }
+    if (builderInputSurface != null) {
+      builderInputSurface.set(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE,
+          CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_OFF);
+      videoStabilizationEnable = false;
+    }
+  }
+
+  public boolean isVideoStabilizationEnabled() {
+    return videoStabilizationEnable;
+  }
+
+  public void setFocusDistance(float distance) {
+    CameraCharacteristics characteristics = getCameraCharacteristics();
+    if (characteristics == null) return;
+    if (builderInputSurface != null) {
+      try {
+        if (distance < 0) distance = 0f; //avoid invalid value
+        builderInputSurface.set(CaptureRequest.LENS_FOCUS_DISTANCE, distance);
+        cameraCaptureSession.setRepeatingRequest(builderInputSurface.build(),
+            faceDetectionEnabled ? cb : null, null);
+      } catch (Exception e) {
+        Log.e(TAG, "Error", e);
+      }
     }
   }
 
@@ -514,31 +590,34 @@ public class Camera2ApiManager extends CameraDevice.StateCallback {
     return autoFocusEnabled;
   }
 
-  public void enableFaceDetection(FaceDetectorCallback faceDetectorCallback) {
+  public boolean enableFaceDetection(FaceDetectorCallback faceDetectorCallback) {
     CameraCharacteristics characteristics = getCameraCharacteristics();
-    if (characteristics == null) return;
-    int[] fd =
-        characteristics.get(CameraCharacteristics.STATISTICS_INFO_AVAILABLE_FACE_DETECT_MODES);
-    if (fd == null) return;
-    Integer maxFD = characteristics.get(CameraCharacteristics.STATISTICS_INFO_MAX_FACE_COUNT);
-    if (maxFD == null) return;
-    if (fd.length > 0) {
-      List<Integer> fdList = new ArrayList<>();
-      for (int FaceD : fd) {
-        fdList.add(FaceD);
-      }
-      if (maxFD > 0) {
-        this.faceDetectorCallback = faceDetectorCallback;
-        faceDetectionEnabled = true;
-        faceDetectionMode = Collections.max(fdList);
-        setFaceDetect(builderInputSurface, faceDetectionMode);
-        prepareFaceDetectionCallback();
-      } else {
-        Log.e(TAG, "No face detection");
-      }
-    } else {
-      Log.e(TAG, "No face detection");
+    if (characteristics == null) {
+      Log.e(TAG, "face detection called with camera stopped");
+      return false;
     }
+    faceSensorScale = characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
+    sensorOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
+    int[] fd = characteristics.get(CameraCharacteristics.STATISTICS_INFO_AVAILABLE_FACE_DETECT_MODES);
+    if (fd == null || fd.length == 0) {
+      Log.e(TAG, "face detection unsupported");
+      return false;
+    }
+    Integer maxFD = characteristics.get(CameraCharacteristics.STATISTICS_INFO_MAX_FACE_COUNT);
+    if (maxFD == null || maxFD <= 0) {
+      Log.e(TAG, "face detection unsupported");
+      return false;
+    }
+    List<Integer> fdList = new ArrayList<>();
+    for (int FaceD : fd) {
+      fdList.add(FaceD);
+    }
+    this.faceDetectorCallback = faceDetectorCallback;
+    faceDetectionEnabled = true;
+    faceDetectionMode = Collections.max(fdList);
+    setFaceDetect(builderInputSurface, faceDetectionMode);
+    prepareFaceDetectionCallback();
+    return true;
   }
 
   public void disableFaceDetection() {
@@ -582,7 +661,7 @@ public class Camera2ApiManager extends CameraDevice.StateCallback {
             @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
           Face[] faces = result.get(CaptureResult.STATISTICS_FACES);
           if (faceDetectorCallback != null) {
-            faceDetectorCallback.onGetFaces(faces);
+            faceDetectorCallback.onGetFaces(faces, faceSensorScale, sensorOrientation);
           }
         }
       };
@@ -602,9 +681,9 @@ public class Camera2ApiManager extends CameraDevice.StateCallback {
         running = true;
         Integer facing = cameraCharacteristics.get(CameraCharacteristics.LENS_FACING);
         if (facing == null) return;
-        isFrontCamera = LENS_FACING_FRONT == facing;
+        this.facing = LENS_FACING_FRONT == facing ? CameraHelper.Facing.FRONT : CameraHelper.Facing.BACK;
         if (cameraCallbacks != null) {
-          cameraCallbacks.onCameraChanged(isFrontCamera);
+          cameraCallbacks.onCameraChanged(this.facing);
         }
       } catch (CameraAccessException | SecurityException e) {
         if (cameraCallbacks != null) {
@@ -624,7 +703,7 @@ public class Camera2ApiManager extends CameraDevice.StateCallback {
   public void switchCamera() {
     try {
       String cameraId;
-      if (cameraDevice == null || isFrontCamera) {
+      if (cameraDevice == null || facing == Facing.FRONT) {
         cameraId = getCameraIdForFacing(cameraManager, Facing.BACK);
       } else {
         cameraId = getCameraIdForFacing(cameraManager, Facing.FRONT);
@@ -716,10 +795,6 @@ public class Camera2ApiManager extends CameraDevice.StateCallback {
     }
   }
 
-  public boolean isFrontCamera() {
-    return isFrontCamera;
-  }
-
   private void resetCameraValues() {
     lanternEnable = false;
     zoomLevel = 1.0f;
@@ -791,7 +866,7 @@ public class Camera2ApiManager extends CameraDevice.StateCallback {
     cameraDevice.close();
     semaphore.release();
     if (cameraCallbacks != null) cameraCallbacks.onCameraError("Open camera failed: " + i);
-    Log.e(TAG, "Open failed");
+    Log.e(TAG, "Open failed: " + i);
   }
 
   @Nullable

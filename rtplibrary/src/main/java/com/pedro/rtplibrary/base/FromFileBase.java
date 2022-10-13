@@ -1,7 +1,6 @@
 package com.pedro.rtplibrary.base;
 
 import android.content.Context;
-import android.graphics.SurfaceTexture;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
@@ -9,7 +8,6 @@ import android.media.MediaCodec;
 import android.media.MediaFormat;
 import android.os.Build;
 import android.util.Log;
-import android.view.Surface;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -53,14 +51,13 @@ public abstract class FromFileBase
     implements GetVideoData, GetAacData, GetMicrophoneData, LoopFileInterface {
 
   private static final String TAG = "FromFileBase";
-  private Context context;
 
   protected VideoEncoder videoEncoder;
   private AudioEncoder audioEncoder;
   private GlInterface glInterface;
   private boolean streaming = false;
   protected RecordController recordController;
-  private FpsListener fpsListener = new FpsListener();
+  private final FpsListener fpsListener = new FpsListener();
 
   private VideoDecoder videoDecoder;
   private AudioDecoder audioDecoder;
@@ -84,7 +81,6 @@ public abstract class FromFileBase
    */
   public FromFileBase(Context context, VideoDecoderInterface videoDecoderInterface,
       AudioDecoderInterface audioDecoderInterface) {
-    this.context = context;
     glInterface = new OffScreenGlThread(context);
     glInterface.init();
     init(videoDecoderInterface, audioDecoderInterface);
@@ -92,7 +88,6 @@ public abstract class FromFileBase
 
   public FromFileBase(OpenGlView openGlView, VideoDecoderInterface videoDecoderInterface,
       AudioDecoderInterface audioDecoderInterface) {
-    context = openGlView.getContext();
     glInterface = openGlView;
     glInterface.init();
     init(videoDecoderInterface, audioDecoderInterface);
@@ -100,7 +95,6 @@ public abstract class FromFileBase
 
   public FromFileBase(LightOpenGlView lightOpenGlView, VideoDecoderInterface videoDecoderInterface,
       AudioDecoderInterface audioDecoderInterface) {
-    context = lightOpenGlView.getContext();
     glInterface = lightOpenGlView;
     glInterface.init();
     init(videoDecoderInterface, audioDecoderInterface);
@@ -231,7 +225,7 @@ public abstract class FromFileBase
     if (!streaming) {
       startEncoders();
     } else if (videoEncoder.isRunning()) {
-      resetVideoEncoder();
+      requestKeyFrame();
     }
   }
 
@@ -251,7 +245,7 @@ public abstract class FromFileBase
     if (!streaming) {
       startEncoders();
     } else if (videoEncoder.isRunning()) {
-      resetVideoEncoder();
+      requestKeyFrame();
     }
   }
 
@@ -286,7 +280,7 @@ public abstract class FromFileBase
     if (!recordController.isRunning()) {
       startEncoders();
     } else {
-      if (videoEnabled) resetVideoEncoder();
+      if (videoEnabled) requestKeyFrame();
     }
     startStreamRtp(url);
   }
@@ -328,10 +322,7 @@ public abstract class FromFileBase
           this.glInterface.removeMediaCodecSurface();
           this.glInterface.stop();
           this.glInterface = glInterface;
-          videoEncoder.reset();
-          if (!(glInterface instanceof OffScreenGlThread)) {
-            glInterface.init();
-          }
+          this.glInterface.init();
           prepareGlView();
           if (Build.VERSION.SDK_INT >= 23) {
             videoDecoder.changeOutputSurface(this.glInterface.getSurface());
@@ -351,16 +342,13 @@ public abstract class FromFileBase
         }
       } else {
         this.glInterface = glInterface;
+        this.glInterface.init();
       }
     }
   }
 
   private void prepareGlView() {
     if (glInterface != null) {
-      if (glInterface instanceof OffScreenGlThread) {
-        glInterface = new OffScreenGlThread(context);
-        glInterface.init();
-      }
       glInterface.setFps(videoEncoder.getFps());
       if (videoEncoder.getRotation() == 90 || videoEncoder.getRotation() == 270) {
         glInterface.setEncoderSize(videoEncoder.getHeight(), videoEncoder.getWidth());
@@ -376,46 +364,47 @@ public abstract class FromFileBase
     }
   }
 
-  private void resetVideoEncoder() {
-    if (glInterface != null) {
-      glInterface.removeMediaCodecSurface();
-    }
-    videoEncoder.reset();
-    if (glInterface != null) {
-      glInterface.addMediaCodecSurface(videoEncoder.getInputSurface());
+  private void requestKeyFrame() {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+      videoEncoder.requestKeyframe();
     } else {
-      videoDecoder.reset(videoEncoder.getInputSurface());
+      if (glInterface != null) {
+        glInterface.removeMediaCodecSurface();
+      }
+      videoEncoder.reset();
+      if (glInterface != null) {
+        glInterface.addMediaCodecSurface(videoEncoder.getInputSurface());
+      } else {
+        videoDecoder.reset(videoEncoder.getInputSurface());
+      }
     }
   }
 
   protected abstract void stopStreamRtp();
 
-  public boolean reTry(long delay, String reason) {
+  /**
+   * Retries to connect with the given delay. You can pass an optional backupUrl
+   * if you'd like to connect to your backup server instead of the original one.
+   * Given backupUrl replaces the original one.
+   */
+  public boolean reTry(long delay, String reason, @Nullable String backupUrl) {
     boolean result = shouldRetry(reason);
     if (result) {
-      reTry(delay);
+      requestKeyFrame();
+      reConnect(delay, backupUrl);
     }
     return result;
   }
 
-  /**
-   * Replace with reTry(long delay, String reason);
-   */
-  @Deprecated
-  public void reTry(long delay) {
-    if (videoEnabled) resetVideoEncoder();
-    reConnect(delay);
+  public boolean reTry(long delay, String reason) {
+    return reTry(delay, reason, null);
   }
 
-  /**
-   * Replace with reTry(long delay, String reason);
-   */
-  @Deprecated
-  public abstract boolean shouldRetry(String reason);
+  protected abstract boolean shouldRetry(String reason);
 
   public abstract void setReTries(int reTries);
 
-  protected abstract void reConnect(long delay);
+  protected abstract void reConnect(long delay, @Nullable String backupUrl);
 
   //cache control
   public abstract boolean hasCongestion();
@@ -511,10 +500,9 @@ public abstract class FromFileBase
    *
    * @param bitrate H264 in bits per second.
    */
+  @RequiresApi(api = Build.VERSION_CODES.KITKAT)
   public void setVideoBitrateOnFly(int bitrate) {
-    if (Build.VERSION.SDK_INT >= 19) {
-      videoEncoder.setVideoBitrateOnFly(bitrate);
-    }
+    videoEncoder.setVideoBitrateOnFly(bitrate);
   }
 
   /**
@@ -636,13 +624,8 @@ public abstract class FromFileBase
   protected abstract void onSpsPpsVpsRtp(ByteBuffer sps, ByteBuffer pps, ByteBuffer vps);
 
   @Override
-  public void onSpsPps(ByteBuffer sps, ByteBuffer pps) {
-    if (streaming) onSpsPpsVpsRtp(sps, pps, null);
-  }
-
-  @Override
   public void onSpsPpsVps(ByteBuffer sps, ByteBuffer pps, ByteBuffer vps) {
-    if (streaming) onSpsPpsVpsRtp(sps, pps, vps);
+    onSpsPpsVpsRtp(sps.duplicate(), pps.duplicate(), vps != null ? vps.duplicate() : null);
   }
 
   protected abstract void getH264DataRtp(ByteBuffer h264Buffer, MediaCodec.BufferInfo info);
@@ -656,7 +639,7 @@ public abstract class FromFileBase
 
   @Override
   public void onVideoFormat(MediaFormat mediaFormat) {
-    recordController.setVideoFormat(mediaFormat);
+    recordController.setVideoFormat(mediaFormat, !audioEnabled);
   }
 
   protected abstract void getAacDataRtp(ByteBuffer aacBuffer, MediaCodec.BufferInfo info);

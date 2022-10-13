@@ -1,6 +1,5 @@
 apply plugin: 'com.android.library'
-apply plugin: 'com.github.dcendents.android-maven'
-group = 'com.github.pedroSG94'
+apply plugin: 'maven-publish'
 
 android {
     compileSdkVersion 30
@@ -8,8 +7,8 @@ android {
     defaultConfig {
         minSdkVersion 16
         targetSdkVersion 30
-        versionCode 199
-        versionName "1.9.9"
+        versionCode 207
+        versionName "2.0.7"
     }
     buildTypes {
         create("debugProguard") {
@@ -20,8 +19,23 @@ android {
             consumerProguardFiles 'proguard-rules.pro'
         }
     }
+
+    afterEvaluate {
+        publishing {
+            publications {
+                // Creates a Maven publication called "release".
+                release(MavenPublication) {
+                    // Applies the component for the release build variant.
+                    from components.release
+
+                    // You can then customize attributes of the publication as shown below.
+                    artifactId = "encoder"
+                }
+            }
+        }
+    }
 }
 
 dependencies {
-    api 'androidx.annotation:annotation:1.1.0'
+    api 'androidx.annotation:annotation:1.2.0'
 }

@@ -64,9 +64,9 @@ class RtpService : Service() {
   }
 
   companion object {
-    private val TAG = "RtpService"
-    private val channelId = "rtpStreamChannel"
-    private val notifyId = 123456
+    private const val TAG = "RtpService"
+    private const val channelId = "rtpStreamChannel"
+    private const val notifyId = 123456
     private var notificationManager: NotificationManager? = null
     private var camera2Base: Camera2Base? = null
     private var openGlView: OpenGlView? = null
@@ -106,6 +106,10 @@ class RtpService : Service() {
 
 
     private val connectCheckerRtp = object : ConnectCheckerRtp {
+      override fun onConnectionStartedRtp(rtpUrl: String) {
+        showNotification("Stream connection started")
+      }
+
       override fun onConnectionSuccessRtp() {
         showNotification("Stream started")
         Log.e(TAG, "RTP service destroy")

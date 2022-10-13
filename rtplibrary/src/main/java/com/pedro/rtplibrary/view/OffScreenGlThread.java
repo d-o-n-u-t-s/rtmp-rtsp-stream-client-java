@@ -28,11 +28,11 @@ public class OffScreenGlThread
   private boolean running = true;
   private boolean initialized = false;
 
-  private SurfaceManager surfaceManagerPhoto = null;
-  private SurfaceManager surfaceManager = null;
-  private SurfaceManager surfaceManagerEncoder = null;
+  private final SurfaceManager surfaceManagerPhoto = new SurfaceManager();
+  private final SurfaceManager surfaceManager = new SurfaceManager();
+  private final SurfaceManager surfaceManagerEncoder = new SurfaceManager();
 
-  private ManagerRender textureManager = null;
+  private ManagerRender managerRender = null;
 
   private final Semaphore semaphore = new Semaphore(0);
   private final BlockingQueue<Filter> filterQueue = new LinkedBlockingQueue<>();
@@ -41,12 +41,13 @@ public class OffScreenGlThread
   private boolean loadAA = false;
   private int streamRotation;
   private boolean muteVideo = false;
+  protected boolean isPreviewHorizontalFlip = false;
+  protected boolean isPreviewVerticalFlip = false;
   private boolean isStreamHorizontalFlip = false;
   private boolean isStreamVerticalFlip = false;
 
   private boolean AAEnabled = false;
-  private FpsLimiter fpsLimiter = new FpsLimiter();
-  //used with camera
+  private final FpsLimiter fpsLimiter = new FpsLimiter();
   private TakePhotoCallback takePhotoCallback;
   private boolean forceRender = false;
 
@@ -56,8 +57,8 @@ public class OffScreenGlThread
 
   @Override
   public void init() {
-    if (!initialized) textureManager = new ManagerRender();
-    textureManager.setCameraFlip(false, false);
+    if (!initialized) managerRender = new ManagerRender();
+    managerRender.setCameraFlip(false, false);
     initialized = true;
   }
 
@@ -94,35 +95,32 @@ public class OffScreenGlThread
 
   @Override
   public SurfaceTexture getSurfaceTexture() {
-    return textureManager.getSurfaceTexture();
+    return managerRender.getSurfaceTexture();
   }
 
   @Override
   public Surface getSurface() {
-    return textureManager.getSurface();
+    return managerRender.getSurface();
   }
 
   @Override
   public void addMediaCodecSurface(Surface surface) {
     synchronized (sync) {
-      if (surfaceManagerPhoto != null) {
+      if (surfaceManager.isReady()) {
         surfaceManagerPhoto.release();
-        surfaceManagerPhoto = null;
+        surfaceManagerEncoder.release();
+        surfaceManagerEncoder.eglSetup(surface, surfaceManager);
+        surfaceManagerPhoto.eglSetup(encoderWidth, encoderHeight, surfaceManagerEncoder);
       }
-      surfaceManagerEncoder = new SurfaceManager(surface, surfaceManager);
     }
   }
 
   @Override
   public void removeMediaCodecSurface() {
     synchronized (sync) {
-      if (surfaceManagerEncoder != null) {
-        surfaceManagerEncoder.release();
-        surfaceManagerEncoder = null;
-      }
-      if (surfaceManagerPhoto == null && surfaceManager != null) {
-        surfaceManagerPhoto = new SurfaceManager(encoderWidth, encoderHeight, surfaceManager);
-      }
+      surfaceManagerPhoto.release();
+      surfaceManagerEncoder.release();
+      surfaceManagerPhoto.eglSetup(encoderWidth, encoderHeight, surfaceManager);
     }
   }
 
@@ -149,7 +147,7 @@ public class OffScreenGlThread
 
   @Override
   public void setRotation(int rotation) {
-    textureManager.setCameraRotation(rotation);
+    managerRender.setCameraRotation(rotation);
   }
 
   @Override
@@ -168,13 +166,23 @@ public class OffScreenGlThread
   }
 
   @Override
+  public void setIsPreviewHorizontalFlip(boolean flip) {
+    isPreviewHorizontalFlip = flip;
+  }
+
+  @Override
+  public void setIsPreviewVerticalFlip(boolean flip) {
+    isPreviewVerticalFlip = flip;
+  }
+
+  @Override
   public boolean isAAEnabled() {
-    return textureManager != null && textureManager.isAAEnabled();
+    return managerRender != null && managerRender.isAAEnabled();
   }
 
   @Override
   public boolean isPortrait() {
-    return textureManager.isPortrait();
+    return managerRender.isPortrait();
   }
 
   @Override
@@ -199,70 +207,56 @@ public class OffScreenGlThread
         }
         thread = null;
       }
-      running = false;
-    }
-  }
-
-  private void releaseSurfaceManager() {
-    if (surfaceManager != null) {
-      surfaceManager.release();
-      surfaceManager = null;
-    }
-    if (surfaceManagerPhoto != null) {
       surfaceManagerPhoto.release();
-      surfaceManagerPhoto = null;
+      surfaceManagerEncoder.release();
+      surfaceManager.release();
+      running = false;
     }
   }
 
   @Override
   public void run() {
-    releaseSurfaceManager();
-    surfaceManager = new SurfaceManager();
+    surfaceManager.release();
+    surfaceManager.eglSetup();
     surfaceManager.makeCurrent();
-    textureManager.initGl(context, encoderWidth, encoderHeight, encoderWidth, encoderHeight);
-    textureManager.getSurfaceTexture().setOnFrameAvailableListener(this);
-    if (surfaceManagerEncoder == null && surfaceManagerPhoto == null) {
-      surfaceManagerPhoto = new SurfaceManager(encoderWidth, encoderHeight, surfaceManager);
-    }
+    managerRender.initGl(context, encoderWidth, encoderHeight, encoderWidth, encoderHeight);
+    managerRender.getSurfaceTexture().setOnFrameAvailableListener(this);
+    surfaceManagerPhoto.release();
+    surfaceManagerPhoto.eglSetup(encoderWidth, encoderHeight, surfaceManager);
     semaphore.release();
     try {
       while (running) {
         if (frameAvailable || forceRender) {
           frameAvailable = false;
           surfaceManager.makeCurrent();
-          textureManager.updateFrame();
-          textureManager.drawOffScreen();
-          textureManager.drawScreen(encoderWidth, encoderHeight, false, 2, 0, true, false, false);
+          managerRender.updateFrame();
+          managerRender.drawOffScreen();
+          managerRender.drawScreen(encoderWidth, encoderHeight, false, 2, 0, true, false, false);
           surfaceManager.swapBuffer();
 
           synchronized (sync) {
-            if (surfaceManagerEncoder != null && !fpsLimiter.limitFPS()) {
+            if (surfaceManagerEncoder.isReady() && !fpsLimiter.limitFPS()) {
+              int w = muteVideo ? 0 : encoderWidth;
+              int h = muteVideo ? 0 : encoderHeight;
               surfaceManagerEncoder.makeCurrent();
-              if (muteVideo) {
-                textureManager.drawScreen(0, 0, false, 2, streamRotation, false,
-                    isStreamVerticalFlip, isStreamHorizontalFlip);
-              } else {
-                textureManager.drawScreen(encoderWidth, encoderHeight, false, 2, streamRotation,
-                    false, isStreamVerticalFlip, isStreamHorizontalFlip);
-              }
-              //Necessary use surfaceManagerEncoder because preview manager size in background is 1x1.
-            } else if (takePhotoCallback != null && surfaceManagerPhoto != null) {
-              surfaceManagerPhoto.makeCurrent();
-              textureManager.drawScreen(encoderWidth, encoderHeight, false, 0, streamRotation,
-                  false, isStreamVerticalFlip, isStreamHorizontalFlip);
+              managerRender.drawScreen(w, h, false, 2,
+                  streamRotation, false, isStreamVerticalFlip, isStreamHorizontalFlip);
+              surfaceManagerEncoder.swapBuffer();
             }
-            if (takePhotoCallback != null) {
+            if (takePhotoCallback != null && surfaceManagerPhoto.isReady()) {
+              surfaceManagerPhoto.makeCurrent();
+              managerRender.drawScreen(encoderWidth, encoderHeight, false, 2,
+                  streamRotation, false, isStreamVerticalFlip, isStreamHorizontalFlip);
               takePhotoCallback.onTakePhoto(GlUtil.getBitmap(encoderWidth, encoderHeight));
               takePhotoCallback = null;
+              surfaceManagerPhoto.swapBuffer();
             }
-            if (surfaceManagerEncoder != null) surfaceManagerEncoder.swapBuffer();
-            else if (surfaceManagerPhoto != null) surfaceManagerPhoto.swapBuffer();
           }
           if (!filterQueue.isEmpty()) {
             Filter filter = filterQueue.take();
-            textureManager.setFilter(filter.getPosition(), filter.getBaseFilterRender());
+            managerRender.setFilter(filter.getPosition(), filter.getBaseFilterRender());
           } else if (loadAA) {
-            textureManager.enableAA(AAEnabled);
+            managerRender.enableAA(AAEnabled);
             loadAA = false;
           }
         }
@@ -270,8 +264,10 @@ public class OffScreenGlThread
     } catch (InterruptedException ignore) {
       Thread.currentThread().interrupt();
     } finally {
-      textureManager.release();
-      releaseSurfaceManager();
+      managerRender.release();
+      surfaceManager.release();
+      surfaceManagerPhoto.release();
+      surfaceManagerEncoder.release();
     }
   }
 

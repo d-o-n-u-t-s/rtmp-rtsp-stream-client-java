@@ -13,7 +13,7 @@ import java.net.UnknownHostException
 /**
  * Created by pedro on 8/11/18.
  */
-internal class SenderReportUdp(videoSourcePort: Int, audioSourcePort: Int) : BaseSenderReport() {
+open class SenderReportUdp(videoSourcePort: Int, audioSourcePort: Int) : BaseSenderReport() {
 
   private var multicastSocketVideo: MulticastSocket? = null
   private var multicastSocketAudio: MulticastSocket? = null
@@ -39,7 +39,7 @@ internal class SenderReportUdp(videoSourcePort: Int, audioSourcePort: Int) : Bas
   }
 
   @Throws(IOException::class)
-  override fun sendReport(buffer: ByteArray, rtpFrame: RtpFrame, type: String, packetCount: Int, octetCount: Int, isEnableLogs: Boolean) {
+  override fun sendReport(buffer: ByteArray, rtpFrame: RtpFrame, type: String, packetCount: Long, octetCount: Long, isEnableLogs: Boolean) {
     sendReportUDP(buffer, rtpFrame.rtcpPort, type, packetCount, octetCount, isEnableLogs)
   }
 
@@ -49,7 +49,7 @@ internal class SenderReportUdp(videoSourcePort: Int, audioSourcePort: Int) : Bas
   }
 
   @Throws(IOException::class)
-  private fun sendReportUDP(buffer: ByteArray, port: Int, type: String, packet: Int, octet: Int, isEnableLogs: Boolean) {
+  private fun sendReportUDP(buffer: ByteArray, port: Int, type: String, packet: Long, octet: Long, isEnableLogs: Boolean) {
     synchronized(RtpConstants.lock) {
       datagramPacket.data = buffer
       datagramPacket.port = port

@@ -13,8 +13,8 @@ import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
+import com.pedro.rtmp.utils.ConnectCheckerRtmp;
 import com.pedro.rtpstreamer.R;
-import net.ossrs.rtmp.ConnectCheckerRtmp;
 
 /**
  * More documentation see:
@@ -74,6 +74,10 @@ public class DisplayActivity extends AppCompatActivity
     if (notificationManager != null) {
       notificationManager.cancel(12345);
     }
+  }
+
+  @Override
+  public void onConnectionStartedRtmp(String rtmpUrl) {
   }
 
   @Override

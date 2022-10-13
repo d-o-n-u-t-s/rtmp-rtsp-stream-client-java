@@ -138,7 +138,7 @@ public class SimpleCameraRender {
     uSTMatrixHandle = GLES20.glGetUniformLocation(program, "uSTMatrix");
 
     //camera texture
-    GlUtil.createExternalTextures(1, texturesID, 0);
+    GlUtil.createExternalTextures(texturesID.length, texturesID, 0);
     textureID = texturesID[0];
 
     surfaceTexture = new SurfaceTexture(textureID);
@@ -149,8 +149,8 @@ public class SimpleCameraRender {
 
   public void release() {
     GLES20.glDeleteProgram(program);
-    surfaceTexture = null;
-    surface = null;
+    surfaceTexture.release();
+    surface.release();
   }
 
   public void setFlip(boolean isFlipHorizontal, boolean isFlipVertical) {

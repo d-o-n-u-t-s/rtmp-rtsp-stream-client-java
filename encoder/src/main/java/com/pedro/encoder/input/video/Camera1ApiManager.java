@@ -42,11 +42,11 @@ public class Camera1ApiManager implements Camera.PreviewCallback, Camera.FaceDet
   private GetCameraData getCameraData;
   private boolean running = false;
   private boolean lanternEnable = false;
+  private boolean videoStabilizationEnable = false;
   private boolean autoFocusEnabled = false;
   private int cameraSelect;
-  private boolean isFrontCamera = false;
+  private CameraHelper.Facing facing = CameraHelper.Facing.BACK;
   private boolean isPortrait = false;
-  private int cameraFacing = Camera.CameraInfo.CAMERA_FACING_BACK;
   private Context context;
 
   //default parameters for camera
@@ -64,9 +64,12 @@ public class Camera1ApiManager implements Camera.PreviewCallback, Camera.FaceDet
 
   //Face detector
   public interface FaceDetectorCallback {
-    void onGetFaces(Camera.Face[] faces);
+    void onGetFaces(Camera.Face[] faces, Rect scaleSensor, int sensorOrientation);
   }
 
+  private final int sensorOrientation = 0;
+  //Value obtained from Camera.Face documentation api about bounds
+  private final Rect faceSensorScale = new Rect(-1000, -1000, 1000, 1000);
   private FaceDetectorCallback faceDetectorCallback;
 
   public Camera1ApiManager(SurfaceView surfaceView, GetCameraData getCameraData) {
@@ -112,22 +115,22 @@ public class Camera1ApiManager implements Camera.PreviewCallback, Camera.FaceDet
     return height;
   }
 
+  public void setCameraFacing(CameraHelper.Facing cameraFacing) {
+    facing = cameraFacing;
+  }
+
   public void start(CameraHelper.Facing cameraFacing, int width, int height, int fps) {
     int facing = cameraFacing == CameraHelper.Facing.BACK ? Camera.CameraInfo.CAMERA_FACING_BACK
         : Camera.CameraInfo.CAMERA_FACING_FRONT;
     this.width = width;
     this.height = height;
     this.fps = fps;
-    this.cameraFacing = facing;
     cameraSelect =
         facing == Camera.CameraInfo.CAMERA_FACING_BACK ? selectCameraBack() : selectCameraFront();
     start();
   }
 
   public void start(int width, int height, int fps) {
-    CameraHelper.Facing facing =
-        cameraFacing == Camera.CameraInfo.CAMERA_FACING_BACK ? CameraHelper.Facing.BACK
-            : CameraHelper.Facing.FRONT;
     start(facing, width, height, fps);
   }
 
@@ -140,7 +143,7 @@ public class Camera1ApiManager implements Camera.PreviewCallback, Camera.FaceDet
       camera = Camera.open(cameraSelect);
       Camera.CameraInfo info = new Camera.CameraInfo();
       Camera.getCameraInfo(cameraSelect, info);
-      isFrontCamera = info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT;
+      facing = info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT ? CameraHelper.Facing.FRONT : CameraHelper.Facing.BACK;
       isPortrait = context.getResources().getConfiguration().orientation
           == Configuration.ORIENTATION_PORTRAIT;
       Camera.Parameters parameters = camera.getParameters();
@@ -178,7 +181,7 @@ public class Camera1ApiManager implements Camera.PreviewCallback, Camera.FaceDet
       camera.startPreview();
       running = true;
       if (cameraCallbacks != null) {
-        cameraCallbacks.onCameraChanged(isFrontCamera);
+        cameraCallbacks.onCameraChanged(facing);
       }
       Log.i(TAG, width + "X" + height);
     } catch (IOException e) {
@@ -309,7 +312,7 @@ public class Camera1ApiManager implements Camera.PreviewCallback, Camera.FaceDet
 
   @Override
   public void onPreviewFrame(byte[] data, Camera camera) {
-    getCameraData.inputYUVData(new Frame(data, rotation, isFrontCamera && isPortrait, imageFormat));
+    getCameraData.inputYUVData(new Frame(data, rotation, facing == CameraHelper.Facing.FRONT && isPortrait, imageFormat));
     camera.addCallbackBuffer(yuvBuffer);
   }
 
@@ -382,8 +385,8 @@ public class Camera1ApiManager implements Camera.PreviewCallback, Camera.FaceDet
     }
   }
 
-  public boolean isFrontCamera() {
-    return isFrontCamera;
+  public CameraHelper.Facing getCameraFacing() {
+    return facing;
   }
 
   public void switchCamera() throws CameraOpenException {
@@ -398,8 +401,6 @@ public class Camera1ApiManager implements Camera.PreviewCallback, Camera.FaceDet
             throw new CameraOpenException("This camera resolution cant be opened");
           }
           stop();
-          cameraFacing = cameraFacing == Camera.CameraInfo.CAMERA_FACING_BACK
-              ? Camera.CameraInfo.CAMERA_FACING_FRONT : Camera.CameraInfo.CAMERA_FACING_BACK;
           start();
           return;
         }
@@ -474,6 +475,17 @@ public class Camera1ApiManager implements Camera.PreviewCallback, Camera.FaceDet
       lanternEnable = false;
     }
   }
+  
+  private Camera.AutoFocusCallback autoFocusTakePictureCallback = new Camera.AutoFocusCallback() {
+    @Override
+    public void onAutoFocus(boolean success, Camera camera) {
+      if (success) {
+        Log.i(TAG, "tapToFocus success");
+      } else {
+        Log.e(TAG, "tapToFocus failed");
+      }
+    }
+  };
 
   public void tapToFocus(View view, MotionEvent event) {
     if (camera != null && camera.getParameters() != null) {
@@ -484,8 +496,13 @@ public class Camera1ApiManager implements Camera.PreviewCallback, Camera.FaceDet
         List<Camera.Area> meteringAreas = new ArrayList<>();
         meteringAreas.add(new Camera.Area(rect, 800));
         parameters.setFocusAreas(meteringAreas);
-        camera.setParameters(parameters);
+        try {
+          camera.setParameters(parameters);
+        }catch (Exception e) {
+          Log.i(TAG, "tapToFocus error: " + e.getMessage());
+        }
       }
+      camera.autoFocus(autoFocusTakePictureCallback);
     }
   }
 
@@ -545,11 +562,20 @@ public class Camera1ApiManager implements Camera.PreviewCallback, Camera.FaceDet
     }
   }
 
-  public void enableFaceDetection(FaceDetectorCallback faceDetectorCallback) {
-    if (camera != null) {
-      this.faceDetectorCallback = faceDetectorCallback;
-      camera.setFaceDetectionListener(this);
-      camera.startFaceDetection();
+  public boolean enableFaceDetection(FaceDetectorCallback faceDetectorCallback) {
+    try {
+      if (camera != null) {
+        this.faceDetectorCallback = faceDetectorCallback;
+        camera.setFaceDetectionListener(this);
+        camera.startFaceDetection();
+        return true;
+      } else {
+        Log.e(TAG, "face detection called with camera stopped");
+        return false;
+      }
+    } catch (IllegalArgumentException e) {
+      Log.e(TAG, "face detection unsupported");
+      return false;
     }
   }
 
@@ -559,6 +585,31 @@ public class Camera1ApiManager implements Camera.PreviewCallback, Camera.FaceDet
       camera.stopFaceDetection();
       camera.setFaceDetectionListener(null);
     }
+  }
+
+  public boolean enableVideoStabilization() {
+    if (camera != null) {
+      Camera.Parameters parameters = camera.getParameters();
+      if (parameters.isVideoStabilizationSupported()) {
+        parameters.setVideoStabilization(true);
+        videoStabilizationEnable = true;
+      }
+    }
+    return videoStabilizationEnable;
+  }
+
+  public void disableVideoStabilization() {
+    if (camera != null) {
+      Camera.Parameters parameters = camera.getParameters();
+      if (parameters.isVideoStabilizationSupported()) {
+        parameters.setVideoStabilization(false);
+        videoStabilizationEnable = false;
+      }
+    }
+  }
+
+  public boolean isVideoStabilizationEnabled() {
+    return videoStabilizationEnable;
   }
 
   public void setCameraCallbacks(CameraCallbacks cameraCallbacks) {
@@ -571,7 +622,7 @@ public class Camera1ApiManager implements Camera.PreviewCallback, Camera.FaceDet
 
   @Override
   public void onFaceDetection(Camera.Face[] faces, Camera camera) {
-    if (faceDetectorCallback != null) faceDetectorCallback.onGetFaces(faces);
+    if (faceDetectorCallback != null) faceDetectorCallback.onGetFaces(faces, faceSensorScale, sensorOrientation);
   }
 
   private Rect calculateFocusArea(float x, float y, float previewWidth, float previewHeight) {

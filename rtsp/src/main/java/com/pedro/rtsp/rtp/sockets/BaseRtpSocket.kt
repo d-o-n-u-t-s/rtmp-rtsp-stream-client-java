@@ -8,25 +8,26 @@ import java.io.OutputStream
 /**
  * Created by pedro on 7/11/18.
  */
-internal abstract class BaseRtpSocket {
-
-  protected val TAG = "BaseRtpSocket"
-
-  companion object {
-    @JvmStatic
-    fun getInstance(protocol: Protocol, videoSourcePort: Int, audioSourcePort: Int): BaseRtpSocket {
-      return if (protocol === Protocol.TCP) {
-        RtpSocketTcp()
-      } else {
-        RtpSocketUdp(videoSourcePort, audioSourcePort)
-      }
+@ExperimentalStdlibApi
+abstract class BaseRtpSocket {
+    
+    protected val TAG = "BaseRtpSocket"
+    
+    companion object {
+        @JvmStatic
+        fun getInstance(protocol: Protocol, videoSourcePort: Int, audioSourcePort: Int): BaseRtpSocket {
+            return if (protocol === Protocol.TCP) {
+                RtpSocketTcp()
+            } else {
+                RtpSocketUdp(videoSourcePort, audioSourcePort)
+            }
+        }
     }
-  }
-
-  abstract fun setDataStream(outputStream: OutputStream, host: String)
-
-  @Throws(IOException::class)
-  abstract fun sendFrame(rtpFrame: RtpFrame, isEnableLogs: Boolean)
-
-  abstract fun close()
+    
+    abstract fun setDataStream(outputStream: OutputStream, host: String)
+    
+    @Throws(IOException::class)
+    abstract fun sendFrame(rtpFrame: RtpFrame, isEnableLogs: Boolean)
+    
+    abstract fun close()
 }

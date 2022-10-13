@@ -3,7 +3,6 @@ package com.pedro.rtpstreamer.customexample;
 import android.hardware.Camera;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
@@ -30,8 +29,12 @@ import com.pedro.encoder.input.video.CameraHelper;
 import com.pedro.encoder.input.video.CameraOpenException;
 import com.pedro.rtplibrary.rtsp.RtspCamera1;
 import com.pedro.rtpstreamer.R;
+import com.pedro.rtpstreamer.utils.PathUtils;
 import com.pedro.rtsp.rtsp.Protocol;
 import com.pedro.rtsp.utils.ConnectCheckerRtsp;
+
+import org.jetbrains.annotations.NotNull;
+
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -56,8 +59,7 @@ public class RtspActivity extends AppCompatActivity
   private Button bStartStop, bRecord;
   private EditText etUrl;
   private String currentDateAndTime = "";
-  private File folder = new File(Environment.getExternalStorageDirectory().getAbsolutePath()
-      + "/rtmp-rtsp-stream-client-java");
+  private File folder;
   //options menu
   private DrawerLayout drawerLayout;
   private NavigationView navigationView;
@@ -76,6 +78,7 @@ public class RtspActivity extends AppCompatActivity
     super.onCreate(savedInstanceState);
     getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     setContentView(R.layout.activity_custom);
+    folder = PathUtils.getRecordPath(this);
     getSupportActionBar().setDisplayHomeAsUpEnabled(true);
     getSupportActionBar().setHomeButtonEnabled(true);
 
@@ -319,6 +322,10 @@ public class RtspActivity extends AppCompatActivity
   }
 
   @Override
+  public void onConnectionStartedRtsp(@NotNull String rtspUrl) {
+  }
+
+  @Override
   public void onConnectionSuccessRtsp() {
     runOnUiThread(new Runnable() {
       @Override
@@ -448,10 +455,8 @@ public class RtspActivity extends AppCompatActivity
       if (action == MotionEvent.ACTION_MOVE) {
         rtspCamera1.setZoom(motionEvent);
       }
-    } else {
-      if (action == MotionEvent.ACTION_UP) {
-        // todo place to add autofocus functional.
-      }
+    } else if (action == MotionEvent.ACTION_DOWN) {
+      rtspCamera1.tapToFocus(view, motionEvent);
     }
     return true;
   }

@@ -1,6 +1,9 @@
 package com.pedro.rtplibrary.rtsp;
 
 import android.media.MediaCodec;
+
+import androidx.annotation.Nullable;
+
 import com.pedro.rtplibrary.base.OnlyAudioBase;
 import com.pedro.rtsp.rtsp.Protocol;
 import com.pedro.rtsp.rtsp.RtspClient;
@@ -15,7 +18,7 @@ import java.nio.ByteBuffer;
  */
 public class RtspOnlyAudio extends OnlyAudioBase {
 
-  private RtspClient rtspClient;
+  private final RtspClient rtspClient;
 
   public RtspOnlyAudio(ConnectCheckerRtsp connectCheckerRtsp) {
     super();
@@ -89,8 +92,7 @@ public class RtspOnlyAudio extends OnlyAudioBase {
 
   @Override
   protected void prepareAudioRtp(boolean isStereo, int sampleRate) {
-    rtspClient.setIsStereo(isStereo);
-    rtspClient.setSampleRate(sampleRate);
+    rtspClient.setAudioInfo(sampleRate, isStereo);
   }
 
   @Override
@@ -109,13 +111,13 @@ public class RtspOnlyAudio extends OnlyAudioBase {
   }
 
   @Override
-  public boolean shouldRetry(String reason) {
+  protected boolean shouldRetry(String reason) {
     return rtspClient.shouldRetry(reason);
   }
 
   @Override
-  public void reConnect(long delay) {
-    rtspClient.reConnect(delay);
+  public void reConnect(long delay, @Nullable String backupUrl) {
+    rtspClient.reConnect(delay, backupUrl);
   }
 
   @Override

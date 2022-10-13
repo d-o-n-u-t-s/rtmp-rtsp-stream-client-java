@@ -31,11 +31,11 @@ public abstract class OpenGlViewBase extends SurfaceView
   protected boolean running = false;
   protected boolean initialized = false;
 
-  protected SurfaceManager surfaceManagerPhoto = null;
-  protected SurfaceManager surfaceManager = null;
-  protected SurfaceManager surfaceManagerEncoder = null;
+  protected final SurfaceManager surfaceManagerPhoto = new SurfaceManager();
+  protected final SurfaceManager surfaceManager = new SurfaceManager();
+  protected final SurfaceManager surfaceManagerEncoder = new SurfaceManager();
 
-  protected FpsLimiter fpsLimiter = new FpsLimiter();
+  protected final FpsLimiter fpsLimiter = new FpsLimiter();
   protected final Semaphore semaphore = new Semaphore(0);
   protected final BlockingQueue<Filter> filterQueue = new LinkedBlockingQueue<>();
   protected final Object sync = new Object();
@@ -44,6 +44,8 @@ public abstract class OpenGlViewBase extends SurfaceView
   protected TakePhotoCallback takePhotoCallback;
   protected int streamRotation;
   protected boolean muteVideo = false;
+  protected boolean isPreviewHorizontalFlip = false;
+  protected boolean isPreviewVerticalFlip = false;
   protected boolean isStreamHorizontalFlip = false;
   protected boolean isStreamVerticalFlip = false;
   protected boolean forceRender = false;
@@ -76,6 +78,16 @@ public abstract class OpenGlViewBase extends SurfaceView
   @Override
   public void setIsStreamVerticalFlip(boolean flip) {
     isStreamVerticalFlip = flip;
+  }
+
+  @Override
+  public void setIsPreviewHorizontalFlip(boolean flip) {
+    isPreviewHorizontalFlip = flip;
+  }
+
+  @Override
+  public void setIsPreviewVerticalFlip(boolean flip) {
+    isPreviewVerticalFlip = flip;
   }
 
   @Override
@@ -115,12 +127,11 @@ public abstract class OpenGlViewBase extends SurfaceView
   @Override
   public void addMediaCodecSurface(Surface surface) {
     synchronized (sync) {
-      if (surfaceManagerPhoto != null) {
+      if (surfaceManager.isReady()) {
         surfaceManagerPhoto.release();
-        surfaceManagerPhoto = null;
-      }
-      if (surfaceManager != null) {
-        surfaceManagerEncoder = new SurfaceManager(surface, surfaceManager);
+        surfaceManagerEncoder.release();
+        surfaceManagerEncoder.eglSetup(surface, surfaceManager);
+        surfaceManagerPhoto.eglSetup(encoderWidth, encoderHeight, surfaceManagerEncoder);
       }
     }
   }
@@ -128,13 +139,9 @@ public abstract class OpenGlViewBase extends SurfaceView
   @Override
   public void removeMediaCodecSurface() {
     synchronized (sync) {
-      if (surfaceManagerEncoder != null) {
-        surfaceManagerEncoder.release();
-        surfaceManagerEncoder = null;
-      }
-      if (surfaceManagerPhoto == null && surfaceManager != null) {
-        surfaceManagerPhoto = new SurfaceManager(encoderWidth, encoderHeight, surfaceManager);
-      }
+      surfaceManagerPhoto.release();
+      surfaceManagerEncoder.release();
+      surfaceManagerPhoto.eglSetup(encoderWidth, encoderHeight, surfaceManager);
     }
   }
 
@@ -167,18 +174,10 @@ public abstract class OpenGlViewBase extends SurfaceView
         }
         thread = null;
       }
-      running = false;
-    }
-  }
-
-  protected void releaseSurfaceManager() {
-    if (surfaceManager != null) {
-      surfaceManager.release();
-      surfaceManager = null;
-    }
-    if (surfaceManagerPhoto != null) {
       surfaceManagerPhoto.release();
-      surfaceManagerPhoto = null;
+      surfaceManagerEncoder.release();
+      surfaceManager.release();
+      running = false;
     }
   }
 

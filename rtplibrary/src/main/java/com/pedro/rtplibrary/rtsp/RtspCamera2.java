@@ -3,6 +3,8 @@ package com.pedro.rtplibrary.rtsp;
 import android.content.Context;
 import android.media.MediaCodec;
 import android.os.Build;
+
+import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import android.view.SurfaceView;
 import android.view.TextureView;
@@ -27,7 +29,7 @@ import java.nio.ByteBuffer;
 @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
 public class RtspCamera2 extends Camera2Base {
 
-  private RtspClient rtspClient;
+  private final RtspClient rtspClient;
 
   /**
    * @deprecated This view produce rotations problems and could be unsupported in future versions.
@@ -138,8 +140,7 @@ public class RtspCamera2 extends Camera2Base {
 
   @Override
   protected void prepareAudioRtp(boolean isStereo, int sampleRate) {
-    rtspClient.setIsStereo(isStereo);
-    rtspClient.setSampleRate(sampleRate);
+    rtspClient.setAudioInfo(sampleRate, isStereo);
   }
 
   @Override
@@ -158,13 +159,13 @@ public class RtspCamera2 extends Camera2Base {
   }
 
   @Override
-  public boolean shouldRetry(String reason) {
+  protected boolean shouldRetry(String reason) {
     return rtspClient.shouldRetry(reason);
   }
 
   @Override
-  public void reConnect(long delay) {
-    rtspClient.reConnect(delay);
+  public void reConnect(long delay, @Nullable String backupUrl) {
+    rtspClient.reConnect(delay, backupUrl);
   }
 
   @Override
@@ -179,10 +180,7 @@ public class RtspCamera2 extends Camera2Base {
 
   @Override
   protected void onSpsPpsVpsRtp(ByteBuffer sps, ByteBuffer pps, ByteBuffer vps) {
-    ByteBuffer newSps = sps.duplicate();
-    ByteBuffer newPps = pps.duplicate();
-    ByteBuffer newVps = vps != null ? vps.duplicate() : null;
-    rtspClient.setSPSandPPS(newSps, newPps, newVps);
+    rtspClient.setVideoInfo(sps, pps, vps);
   }
 
   @Override

@@ -1,7 +1,7 @@
 package com.pedro.rtpstreamer.backgroundexample
 
+import com.pedro.rtmp.utils.ConnectCheckerRtmp
 import com.pedro.rtsp.utils.ConnectCheckerRtsp
-import net.ossrs.rtmp.ConnectCheckerRtmp
 
 /**
  * (Only working in kotlin)
@@ -12,6 +12,8 @@ interface ConnectCheckerRtp: ConnectCheckerRtmp, ConnectCheckerRtsp {
   /**
    * Commons
    */
+  fun onConnectionStartedRtp(rtpUrl: String)
+
   fun onConnectionSuccessRtp()
 
   fun onConnectionFailedRtp(reason: String)
@@ -27,6 +29,10 @@ interface ConnectCheckerRtp: ConnectCheckerRtmp, ConnectCheckerRtsp {
   /**
    * RTMP
    */
+  override fun onConnectionStartedRtmp(rtmpUrl: String) {
+    onConnectionStartedRtp(rtmpUrl)
+  }
+
   override fun onConnectionSuccessRtmp() {
     onConnectionSuccessRtp()
   }
@@ -54,6 +60,10 @@ interface ConnectCheckerRtp: ConnectCheckerRtmp, ConnectCheckerRtsp {
   /**
    * RTSP
    */
+  override fun onConnectionStartedRtsp(rtspUrl: String) {
+    onConnectionStartedRtp(rtspUrl)
+  }
+
   override fun onConnectionSuccessRtsp() {
     onConnectionSuccessRtp()
   }

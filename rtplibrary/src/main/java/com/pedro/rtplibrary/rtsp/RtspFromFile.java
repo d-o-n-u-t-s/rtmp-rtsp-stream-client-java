@@ -3,6 +3,8 @@ package com.pedro.rtplibrary.rtsp;
 import android.content.Context;
 import android.media.MediaCodec;
 import android.os.Build;
+
+import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import com.pedro.encoder.input.decoder.AudioDecoderInterface;
 import com.pedro.encoder.input.decoder.VideoDecoderInterface;
@@ -25,7 +27,7 @@ import java.nio.ByteBuffer;
 @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
 public class RtspFromFile extends FromFileBase {
 
-  private RtspClient rtspClient;
+  private final RtspClient rtspClient;
 
   public RtspFromFile(ConnectCheckerRtsp connectCheckerRtsp,
       VideoDecoderInterface videoDecoderInterface, AudioDecoderInterface audioDecoderInterface) {
@@ -123,8 +125,7 @@ public class RtspFromFile extends FromFileBase {
 
   @Override
   protected void prepareAudioRtp(boolean isStereo, int sampleRate) {
-    rtspClient.setIsStereo(isStereo);
-    rtspClient.setSampleRate(sampleRate);
+    rtspClient.setAudioInfo(sampleRate, isStereo);
   }
 
   @Override
@@ -144,13 +145,13 @@ public class RtspFromFile extends FromFileBase {
   }
 
   @Override
-  public boolean shouldRetry(String reason) {
+  protected boolean shouldRetry(String reason) {
     return rtspClient.shouldRetry(reason);
   }
 
   @Override
-  public void reConnect(long delay) {
-    rtspClient.reConnect(delay);
+  public void reConnect(long delay, @Nullable String backupUrl) {
+    rtspClient.reConnect(delay, backupUrl);
   }
 
   @Override
@@ -160,10 +161,7 @@ public class RtspFromFile extends FromFileBase {
 
   @Override
   protected void onSpsPpsVpsRtp(ByteBuffer sps, ByteBuffer pps, ByteBuffer vps) {
-    ByteBuffer newSps = sps.duplicate();
-    ByteBuffer newPps = pps.duplicate();
-    ByteBuffer newVps = vps != null ? vps.duplicate() : null;
-    rtspClient.setSPSandPPS(newSps, newPps, newVps);
+    rtspClient.setVideoInfo(sps, pps, vps);
   }
 
   @Override

@@ -3,7 +3,6 @@ package com.pedro.rtpstreamer.texturemodeexample;
 import android.graphics.SurfaceTexture;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import android.view.TextureView;
@@ -16,7 +15,11 @@ import com.pedro.encoder.input.video.CameraOpenException;
 import com.pedro.rtpstreamer.R;
 import com.pedro.rtplibrary.rtsp.RtspCamera2;
 import com.pedro.rtplibrary.view.AutoFitTextureView;
+import com.pedro.rtpstreamer.utils.PathUtils;
 import com.pedro.rtsp.utils.ConnectCheckerRtsp;
+
+import org.jetbrains.annotations.NotNull;
+
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -39,14 +42,14 @@ public class TextureModeRtspActivity extends AppCompatActivity
   private EditText etUrl;
 
   private String currentDateAndTime = "";
-  private File folder = new File(Environment.getExternalStorageDirectory().getAbsolutePath()
-      + "/rtmp-rtsp-stream-client-java");
+  private File folder;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     setContentView(R.layout.activity_texture_mode);
+    folder = PathUtils.getRecordPath(this);
     textureView = findViewById(R.id.textureView);
     button = findViewById(R.id.b_start_stop);
     button.setOnClickListener(this);
@@ -58,6 +61,10 @@ public class TextureModeRtspActivity extends AppCompatActivity
     etUrl.setHint(R.string.hint_rtsp);
     rtspCamera2 = new RtspCamera2(textureView, this);
     textureView.setSurfaceTextureListener(this);
+  }
+
+  @Override
+  public void onConnectionStartedRtsp(@NotNull String rtspUrl) {
   }
 
   @Override

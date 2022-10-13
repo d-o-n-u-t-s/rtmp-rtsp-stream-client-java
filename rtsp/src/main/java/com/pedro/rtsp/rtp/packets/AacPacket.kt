@@ -12,10 +12,11 @@ import kotlin.experimental.or
  *
  * RFC 3640.
  */
-internal class AacPacket(sampleRate: Int, private val audioPacketCallback: AudioPacketCallback) : BasePacket(sampleRate.toLong(), RtpConstants.payloadTypeAudio) {
+open class AacPacket(sampleRate: Int, private val audioPacketCallback: AudioPacketCallback) : BasePacket(sampleRate.toLong(),
+    RtpConstants.payloadType + RtpConstants.trackAudio) {
 
   init {
-    channelIdentifier = (RtpConstants.trackAudio * 2).toByte()
+    channelIdentifier = RtpConstants.trackAudio
   }
 
   override fun createAndSendPacket(byteBuffer: ByteBuffer, bufferInfo: MediaCodec.BufferInfo) {
@@ -25,7 +26,7 @@ internal class AacPacket(sampleRate: Int, private val audioPacketCallback: Audio
       byteBuffer.get(buffer, RtpConstants.RTP_HEADER_LENGTH + 4, length)
       val ts = bufferInfo.presentationTimeUs * 1000
       markPacket(buffer)
-      updateTimeStamp(buffer, ts)
+      val rtpTs = updateTimeStamp(buffer, ts)
 
       // AU-headers-length field: contains the size in bits of a AU-header
       // 13+3 = 16 bits -> 13bits for AU-size and 3bits for AU-Index / AU-Index-delta
@@ -41,7 +42,7 @@ internal class AacPacket(sampleRate: Int, private val audioPacketCallback: Audio
       buffer[RtpConstants.RTP_HEADER_LENGTH + 3] = buffer[RtpConstants.RTP_HEADER_LENGTH + 3] and 0xF8.toByte()
       buffer[RtpConstants.RTP_HEADER_LENGTH + 3] = buffer[RtpConstants.RTP_HEADER_LENGTH + 3] or 0x00
       updateSeq(buffer)
-      val rtpFrame = RtpFrame(buffer, ts, RtpConstants.RTP_HEADER_LENGTH + length + 4, rtpPort, rtcpPort, channelIdentifier)
+      val rtpFrame = RtpFrame(buffer, rtpTs, RtpConstants.RTP_HEADER_LENGTH + length + 4, rtpPort, rtcpPort, channelIdentifier)
       audioPacketCallback.onAudioFrameCreated(rtpFrame)
     }
   }

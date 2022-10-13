@@ -13,6 +13,7 @@ import android.widget.AdapterView;
 import android.widget.GridView;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import com.pedro.rtpstreamer.backgroundexample.BackgroundActivity;
 import com.pedro.rtpstreamer.customexample.RtmpActivity;
 import com.pedro.rtpstreamer.customexample.RtspActivity;
@@ -29,6 +30,7 @@ import com.pedro.rtpstreamer.texturemodeexample.TextureModeRtmpActivity;
 import com.pedro.rtpstreamer.texturemodeexample.TextureModeRtspActivity;
 import com.pedro.rtpstreamer.utils.ActivityLink;
 import com.pedro.rtpstreamer.utils.ImageAdapter;
+
 import java.util.ArrayList;
 import java.util.List;
 

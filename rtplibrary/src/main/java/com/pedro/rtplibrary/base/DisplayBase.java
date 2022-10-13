@@ -2,7 +2,6 @@ package com.pedro.rtplibrary.base;
 
 import android.content.Context;
 import android.content.Intent;
-import android.hardware.display.VirtualDisplay;
 import android.media.AudioAttributes;
 import android.media.AudioPlaybackCaptureConfiguration;
 import android.media.MediaCodec;
@@ -56,21 +55,18 @@ import static android.content.Context.MEDIA_PROJECTION_SERVICE;
 public abstract class DisplayBase implements GetAacData, GetVideoData, GetMicrophoneData {
 
   private OffScreenGlThread glInterface;
-  protected Context context;
   private MediaProjection mediaProjection;
-  private MediaProjectionManager mediaProjectionManager;
+  private final MediaProjectionManager mediaProjectionManager;
   protected VideoEncoder videoEncoder;
   private MicrophoneManager microphoneManager;
   private AudioEncoder audioEncoder;
   private boolean streaming = false;
   protected SurfaceView surfaceView;
-  private boolean videoEnabled = true;
   private int dpi = 320;
-  private VirtualDisplay virtualDisplay;
   private int resultCode = -1;
   private Intent data;
   protected RecordController recordController;
-  private FpsListener fpsListener = new FpsListener();
+  private final FpsListener fpsListener = new FpsListener();
   private MediaProjectionCallback mediaProjectionCallback;
   private MediaProjection.Callback mediaProjectionStopCallback = new MediaProjection.Callback() {
     @Override
@@ -83,7 +79,6 @@ public abstract class DisplayBase implements GetAacData, GetVideoData, GetMicrop
   private boolean audioInitialized = false;
 
   public DisplayBase(Context context, boolean useOpengl) {
-    this.context = context;
     if (useOpengl) {
       glInterface = new OffScreenGlThread(context);
       glInterface.init();
@@ -167,8 +162,6 @@ public abstract class DisplayBase implements GetAacData, GetVideoData, GetMicrop
         videoEncoder.prepareVideoEncoder(width, height, fps, bitrate, rotation, iFrameInterval,
             FormatVideoEncoder.SURFACE, avcProfile, avcProfileLevel);
     if (glInterface != null) {
-      glInterface = new OffScreenGlThread(context);
-      glInterface.init();
       if (rotation == 90 || rotation == 270) {
         glInterface.setEncoderSize(videoEncoder.getHeight(), videoEncoder.getWidth());
       } else {
@@ -308,7 +301,7 @@ public abstract class DisplayBase implements GetAacData, GetVideoData, GetMicrop
     if (!streaming) {
       startEncoders(resultCode, data);
     } else if (videoEncoder.isRunning()) {
-      resetVideoEncoder();
+      requestKeyFrame();
     }
   }
 
@@ -329,7 +322,7 @@ public abstract class DisplayBase implements GetAacData, GetVideoData, GetMicrop
     if (!streaming) {
       startEncoders(resultCode, data);
     } else if (videoEncoder.isRunning()) {
-      resetVideoEncoder();
+      requestKeyFrame();
     }
   }
 
@@ -378,7 +371,7 @@ public abstract class DisplayBase implements GetAacData, GetVideoData, GetMicrop
     if (!recordController.isRunning()) {
       startEncoders(resultCode, data);
     } else {
-      resetVideoEncoder();
+      requestKeyFrame();
     }
     startStreamRtp(url);
   }
@@ -402,28 +395,17 @@ public abstract class DisplayBase implements GetAacData, GetVideoData, GetMicrop
     }
     if (glInterface != null && videoEncoder.getRotation() == 90
         || videoEncoder.getRotation() == 270) {
-      virtualDisplay =
-          mediaProjection.createVirtualDisplay("Stream Display", videoEncoder.getHeight(),
+      mediaProjection.createVirtualDisplay("Stream Display", videoEncoder.getHeight(),
               videoEncoder.getWidth(), dpi, 0, surface, null, null);
     } else {
-      virtualDisplay =
-          mediaProjection.createVirtualDisplay("Stream Display", videoEncoder.getWidth(),
+      mediaProjection.createVirtualDisplay("Stream Display", videoEncoder.getWidth(),
               videoEncoder.getHeight(), dpi, 0, surface, null, null);
     }
     if (audioInitialized) microphoneManager.start();
   }
 
-  private void resetVideoEncoder() {
-    virtualDisplay.setSurface(null);
-    if (glInterface != null) {
-      glInterface.removeMediaCodecSurface();
-    }
-    videoEncoder.reset();
-    if (glInterface != null) {
-      glInterface.addMediaCodecSurface(videoEncoder.getInputSurface());
-    }
-    virtualDisplay.setSurface(
-        glInterface != null ? glInterface.getSurface() : videoEncoder.getInputSurface());
+  protected void requestKeyFrame() {
+    videoEncoder.requestKeyframe();
   }
 
   protected abstract void stopStreamRtp();
@@ -452,32 +434,29 @@ public abstract class DisplayBase implements GetAacData, GetVideoData, GetMicrop
     }
   }
 
-  public boolean reTry(long delay, String reason) {
+  /**
+   * Retries to connect with the given delay. You can pass an optional backupUrl
+   * if you'd like to connect to your backup server instead of the original one.
+   * Given backupUrl replaces the original one.
+   */
+  public boolean reTry(long delay, String reason, @Nullable String backupUrl) {
     boolean result = shouldRetry(reason);
     if (result) {
-      reTry(delay);
+      requestKeyFrame();
+      reConnect(delay, backupUrl);
     }
     return result;
   }
 
-  /**
-   * Replace with reTry(long delay, String reason);
-   */
-  @Deprecated
-  public void reTry(long delay) {
-    resetVideoEncoder();
-    reConnect(delay);
+  public boolean reTry(long delay, String reason) {
+    return reTry(delay, reason, null);
   }
 
-  /**
-   * Replace with reTry(long delay, String reason);
-   */
-  @Deprecated
-  public abstract boolean shouldRetry(String reason);
+  protected abstract boolean shouldRetry(String reason);
 
   public abstract void setReTries(int reTries);
 
-  protected abstract void reConnect(long delay);
+  protected abstract void reConnect(long delay, @Nullable String backupUrl);
 
   //cache control
   public abstract boolean hasCongestion();
@@ -535,15 +514,6 @@ public abstract class DisplayBase implements GetAacData, GetVideoData, GetMicrop
    */
   public boolean isAudioMuted() {
     return microphoneManager.isMuted();
-  }
-
-  /**
-   * Get video camera state
-   *
-   * @return true if disabled, false if enabled
-   */
-  public boolean isVideoEnabled() {
-    return videoEnabled;
   }
 
   public int getBitrate() {
@@ -622,13 +592,8 @@ public abstract class DisplayBase implements GetAacData, GetVideoData, GetMicrop
   protected abstract void onSpsPpsVpsRtp(ByteBuffer sps, ByteBuffer pps, ByteBuffer vps);
 
   @Override
-  public void onSpsPps(ByteBuffer sps, ByteBuffer pps) {
-    if (streaming) onSpsPpsVpsRtp(sps, pps, null);
-  }
-
-  @Override
   public void onSpsPpsVps(ByteBuffer sps, ByteBuffer pps, ByteBuffer vps) {
-    if (streaming) onSpsPpsVpsRtp(sps, pps, vps);
+    onSpsPpsVpsRtp(sps.duplicate(), pps.duplicate(), vps != null ? vps.duplicate() : null);
   }
 
   protected abstract void getH264DataRtp(ByteBuffer h264Buffer, MediaCodec.BufferInfo info);
@@ -647,7 +612,7 @@ public abstract class DisplayBase implements GetAacData, GetVideoData, GetMicrop
 
   @Override
   public void onVideoFormat(MediaFormat mediaFormat) {
-    recordController.setVideoFormat(mediaFormat);
+    recordController.setVideoFormat(mediaFormat, !audioInitialized);
   }
 
   @Override
