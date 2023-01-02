@@ -6,17 +6,13 @@ plugins {
     id("com.google.firebase.crashlytics")
 }
 
-val COMPILE_SDK: String by project
-val MIN_SDK_VERSION: String by project
-val TARGET_SDK_VERSION: String by project
-val KOTLIN_VERSION: String by project
 android {
-    compileSdk = COMPILE_SDK.toInt()
+    compileSdk = libs.versions.compile.sdk.get().toInt()
     
     defaultConfig {
+        minSdk = libs.versions.min.sdk.get().toInt()
+        targetSdk = libs.versions.target.sdk.get().toInt()
         applicationId = "com.pedro.rtpstreamer"
-        minSdk = MIN_SDK_VERSION.toInt()
-        targetSdk = TARGET_SDK_VERSION.toInt()
         versionCode = 199
         versionName = "1.9.9"
     }
@@ -33,5 +29,5 @@ dependencies {
     implementation("com.google.firebase:firebase-crashlytics:17.3.0")
     implementation("com.google.firebase:firebase-analytics:18.0.1")
     implementation("com.google.android.material:material:1.3.0")
-    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk7:$KOTLIN_VERSION")
+    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk7:${libs.versions.kotlin.get()}")
 }

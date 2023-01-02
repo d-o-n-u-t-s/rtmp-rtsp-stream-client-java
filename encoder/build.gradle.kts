@@ -3,15 +3,12 @@ plugins {
 }
 group = "com.github.pedroSG94"
 
-val COMPILE_SDK: String by project
-val MIN_SDK_VERSION: String by project
-val TARGET_SDK_VERSION: String by project
 android {
-    compileSdk = COMPILE_SDK.toInt()
+    compileSdk = libs.versions.compile.sdk.get().toInt()
     
     defaultConfig {
-        minSdk = MIN_SDK_VERSION.toInt()
-        targetSdk = TARGET_SDK_VERSION.toInt()
+        minSdk = libs.versions.min.sdk.get().toInt()
+        targetSdk = libs.versions.target.sdk.get().toInt()
     }
     buildTypes {
         getByName("release") {
