@@ -12,9 +12,9 @@ android {
     defaultConfig {
         minSdk = libs.versions.min.sdk.get().toInt()
         targetSdk = libs.versions.target.sdk.get().toInt()
-        applicationId = "com.pedro.rtpstreamer"
-        versionCode = 199
-        versionName = "1.9.9"
+        applicationId = properties["APPLICATION_ID"] as String
+        versionCode = libs.versions.rtmp.version.code.get().toInt()
+        versionName = libs.versions.rtmp.version.name.get()
     }
     buildTypes {
         getByName("release") {
