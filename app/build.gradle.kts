@@ -26,8 +26,7 @@ android {
 
 dependencies {
     implementation(project(":rtplibrary"))
-    implementation("com.google.firebase:firebase-crashlytics:17.3.0")
-    implementation("com.google.firebase:firebase-analytics:18.0.1")
-    implementation("com.google.android.material:material:1.3.0")
-    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk7:${libs.versions.kotlin.get()}")
+    implementation(libs.com.google.firebase.crashlytics)
+    implementation(libs.com.google.firebase.analytics)
+    implementation(libs.com.google.android.material)
 }
