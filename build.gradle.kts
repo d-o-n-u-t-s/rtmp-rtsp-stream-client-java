@@ -6,18 +6,24 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        // Check that you have the Google Services Gradle plugin v4.3.2 or later
-        // (if not, add it).
-        classpath("com.google.gms:google-services:4.3.4")
         // Add the Crashlytics Gradle plugin.
-        classpath("com.google.firebase:firebase-crashlytics-gradle:2.4.1")
-        
-        classpath("com.android.tools.build:gradle:4.1.2")
-        classpath("com.github.dcendents:android-maven-gradle-plugin:2.0")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:${libs.versions.kotlin.get()}")
+        classpath(libs.com.google.firebase.crashlytics.gradle)
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
     }
+}
+
+//GradleDSLのissueでlibsにエラーが出るためSuppressをつける
+//https://github.com/gradle/gradle/issues/22797
+@Suppress("DSL_SCOPE_VIOLATION")
+plugins {
+    // Check that you have the Google Services Gradle plugin v4.3.2 or later
+    // (if not, add it).
+    alias(libs.plugins.com.google.gms.services) apply false
+    alias(libs.plugins.com.android.library) apply false
+    alias(libs.plugins.com.android.application) apply false
+    alias(libs.plugins.com.github.dcendents.android.maven) apply false
+    alias(libs.plugins.org.jetbrains.kotlin.android) apply false
 }
 
 allprojects {
