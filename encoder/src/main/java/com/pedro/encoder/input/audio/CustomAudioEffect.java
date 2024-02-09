@@ -7,4 +7,6 @@ public abstract class CustomAudioEffect {
    * @return it must be of same size that pcmBuffer parameter.
    */
   public abstract byte[] process(byte[] pcmBuffer);
+  
+  public abstract byte[] process(byte[] pcmBuffer, byte[] internalPcmBuffer);
 }
