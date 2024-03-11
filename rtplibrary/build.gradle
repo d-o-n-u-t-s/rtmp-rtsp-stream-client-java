@@ -16,6 +16,7 @@ android {
             consumerProguardFiles 'proguard-rules.pro'
         }
     }
+    namespace = "com.pedro.rtplibrary"
 }
 
 dependencies {
