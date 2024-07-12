@@ -17,4 +17,9 @@ android {
             consumerProguardFiles 'proguard-rules.pro'
         }
     }
+    namespace = "com.pedro.rtsp"
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
 }
