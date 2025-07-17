@@ -25,6 +25,7 @@ import com.pedro.encoder.input.audio.GetMicrophoneData;
 import com.pedro.encoder.input.audio.MicrophoneManager;
 import com.pedro.encoder.input.audio.MicrophoneManagerManual;
 import com.pedro.encoder.input.audio.MicrophoneMode;
+import com.pedro.encoder.input.audio.MixedAudioMicrophoneManager;
 import com.pedro.encoder.utils.CodecUtil;
 import com.pedro.encoder.video.FormatVideoEncoder;
 import com.pedro.encoder.video.GetVideoData;
@@ -116,6 +117,11 @@ public abstract class DisplayBase implements GetAacData, GetVideoData, GetMicrop
         microphoneManager = new MicrophoneManager(this);
         audioEncoder = new AudioEncoder(this);
         break;
+        setMicrophoneMode(MicrophoneMode.MIXED);
+        case MIXED:
+            microphoneManager = new MixedAudioMicrophoneManager(this);
+            audioEncoder = new AudioEncoder(this);
+            break;
     }
   }
 
@@ -656,5 +662,73 @@ public abstract class DisplayBase implements GetAacData, GetVideoData, GetMicrop
   }
 
   public abstract void setLogs(boolean enable);
+    
+    /**
+     * Create and configure mixed audio microphone for MIXED mode.
+     * Must be called after setMicrophoneMode(MicrophoneMode.MIXED) and before prepareAudio.
+     * @param sampleRate audio sample rate
+     * @param isStereo   true for stereo audio, false for mono
+     * @return true if mixed audio microphone was created successfully
+     */
+    public boolean createMixedAudioMicrophone(int sampleRate, boolean isStereo, boolean echoCanceler, boolean noiseSuppressor) {
+        if (!(microphoneManager instanceof MixedAudioMicrophoneManager)) {
+            return false;
+        }
+        
+        if (mediaProjection == null) {
+            mediaProjection = mediaProjectionManager.getMediaProjection(resultCode, data);
+            mediaProjection.registerCallback(mediaProjectionStopCallback, null);
+        }
+        
+        AudioPlaybackCaptureConfiguration config =
+            new AudioPlaybackCaptureConfiguration.Builder(mediaProjection).addMatchingUsage(
+                    AudioAttributes.USAGE_MEDIA)
+                .addMatchingUsage(AudioAttributes.USAGE_GAME)
+                .addMatchingUsage(AudioAttributes.USAGE_UNKNOWN)
+                .build();
+        
+        MixedAudioMicrophoneManager mixedManager = (MixedAudioMicrophoneManager)microphoneManager;
+        return mixedManager.createMixedAudioMicrophone(config, sampleRate, isStereo,
+            echoCanceler, noiseSuppressor);
+    }
+    
+    
+    /**
+     * Prepare mixed audio (microphone + internal audio) for streaming
+     * @param bitrate         AAC in kb.
+     * @param sampleRate      of audio in hz. Can be 8000, 16000, 22500, 32000, 44100.
+     * @param isStereo        true if you want Stereo audio (2 audio channels), false if you want Mono audio
+     * @param echoCanceler    true enable echo canceler, false disable.
+     * @param noiseSuppressor true enable noise suppressor, false disable.
+     * @return true if success, false if error
+     */
+    @RequiresApi(api = Build.VERSION_CODES.Q)
+    public boolean prepareMixedAudio(int bitrate, int sampleRate, boolean isStereo, boolean echoCanceler, boolean noiseSuppressor) {
+        
+        if (!createMixedAudioMicrophone(sampleRate, isStereo, echoCanceler, noiseSuppressor)) {
+            return false;
+        }
+        
+        prepareAudioRtp(isStereo, sampleRate);
+        audioInitialized = audioEncoder.prepareAudioEncoder(bitrate, sampleRate, isStereo,
+            microphoneManager.getMaxInputSize());
+        return audioInitialized;
+    }
+    
+    /**
+     * Prepare mixed audio with default settings
+     */
+    @RequiresApi(api = Build.VERSION_CODES.Q)
+    public boolean prepareMixedAudio(int bitrate, int sampleRate, boolean isStereo) {
+        return prepareMixedAudio(bitrate, sampleRate, isStereo, false, false);
+    }
+    
+    /**
+     * Prepare mixed audio with default parameters
+     */
+    @RequiresApi(api = Build.VERSION_CODES.Q)
+    public boolean prepareMixedAudio() {
+        return prepareMixedAudio(64 * 1024, 44100, false);
+    }
 }
 
