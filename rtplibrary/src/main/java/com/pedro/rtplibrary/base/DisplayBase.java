@@ -114,7 +114,6 @@ public abstract class DisplayBase implements GetAacData, GetVideoData, GetMicrop
             microphoneManager = new MicrophoneManager(this);
             audioEncoder = new AudioEncoder(this);
             break;
-        setMicrophoneMode(MicrophoneMode.MiXED);
         case MIXED:
             microphoneManager = new MixedAudioMicrophoneManager(this);
             audioEncoder = new AudioEncoder(this);
