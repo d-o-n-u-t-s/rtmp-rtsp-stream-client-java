@@ -95,7 +95,6 @@ public abstract class DisplayBase implements GetAacData, GetVideoData, GetMicrop
     videoEncoder = new VideoEncoder(this);
     audioEncoder = new AudioEncoder(this);
     //Necessary use same thread to read input buffer and encode it with internal audio or audio is choppy.
-    setMicrophoneMode(MicrophoneMode.SYNC);
     recordController = new RecordController();
   }
 
@@ -117,11 +116,10 @@ public abstract class DisplayBase implements GetAacData, GetVideoData, GetMicrop
         microphoneManager = new MicrophoneManager(this);
         audioEncoder = new AudioEncoder(this);
         break;
-        setMicrophoneMode(MicrophoneMode.MIXED);
-        case MIXED:
-            microphoneManager = new MixedAudioMicrophoneManager(this);
-            audioEncoder = new AudioEncoder(this);
-            break;
+      case MIXED:
+        microphoneManager = new MixedAudioMicrophoneManager(this);
+        audioEncoder = new AudioEncoder(this);
+        break;
     }
   }
 
