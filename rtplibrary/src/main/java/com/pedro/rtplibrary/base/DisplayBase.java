@@ -104,6 +104,7 @@ public abstract class DisplayBase implements GetAacData, GetVideoData, GetMicrop
    * @param microphoneMode mode to work accord to audioEncoder. By default SYNC:
    * SYNC using same thread. This mode could solve choppy audio or audio frame discarded.
    * ASYNC using other thread.
+   * MIXED using two AudioSource, innerAudio and micAudio
    */
   public void setMicrophoneMode(MicrophoneMode microphoneMode) {
     switch (microphoneMode) {
