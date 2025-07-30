@@ -94,6 +94,7 @@ public abstract class DisplayBase implements GetAacData, GetVideoData, GetMicrop
     this.surfaceView = null;
     videoEncoder = new VideoEncoder(this);
     audioEncoder = new AudioEncoder(this);
+    setMicrophoneMode(MicrophoneMode.SYNC);
     //Necessary use same thread to read input buffer and encode it with internal audio or audio is choppy.
     recordController = new RecordController();
   }
