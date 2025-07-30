@@ -51,6 +51,7 @@ public class MixedAudioMicrophoneManager extends MicrophoneManager {
         // Create internal audio capture
         Log.d(TAG, "Creating internal audio record...");
         boolean internalCreated = createInternalAudioRecord(internalConfig, sampleRate, isStereo, echoCanceler, noiseSuppressor);
+        created = micCreated && internalCreated;
         
         if (!internalCreated) {
             Log.e(TAG, "Failed to create internal audio record");
