@@ -24,6 +24,7 @@ public class MixedAudioMicrophoneManager extends MicrophoneManager {
     private AudioRecord internalAudioRecord;
     private ByteBuffer internalPcmBuffer;
     private AudioPostProcessEffect internalAudioPostProcessEffect;
+    private boolean internalMuted = false;
     
     public MixedAudioMicrophoneManager(GetMicrophoneData getMicrophoneData) {
         super(getMicrophoneData);
@@ -180,6 +181,10 @@ public class MixedAudioMicrophoneManager extends MicrophoneManager {
                     micData = pcmBufferMuted;
                 }
                 
+                if (internalMuted) {
+                    internalData = pcmBufferMuted;
+                }
+                
                 // Process both audio streams
                 mixedData = customAudioEffect.process(micData, internalData);
             } else {
@@ -194,6 +199,18 @@ public class MixedAudioMicrophoneManager extends MicrophoneManager {
             Log.e(TAG, "Error reading mixed audio", e);
             return null;
         }
+    }
+    
+    public void internalMute() {
+        internalMuted = true;
+    }
+    
+    public void internalUnMute() {
+        internalMuted = false;
+    }
+    
+    public boolean isInternalMuted() {
+        return internalMuted;
     }
     
     /**
