@@ -74,10 +74,6 @@ public class MixedAudioMicrophoneManager extends MicrophoneManager {
             Log.d(TAG, "Android version check: " + Build.VERSION.SDK_INT + " >= " + Build.VERSION_CODES.Q);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 int channel = isStereo ? AudioFormat.CHANNEL_IN_STEREO : AudioFormat.CHANNEL_IN_MONO;
-                int bufferSize = AudioRecord.getMinBufferSize(sampleRate, channel, AudioFormat.ENCODING_PCM_16BIT);
-                Log.d(TAG, "Buffer size calculated: " + bufferSize);
-                
-                Log.d(TAG, "Building AudioRecord...");
                 internalAudioRecord = new AudioRecord.Builder()
                     .setAudioPlaybackCaptureConfig(config)
                     .setAudioFormat(new AudioFormat.Builder()
@@ -85,7 +81,7 @@ public class MixedAudioMicrophoneManager extends MicrophoneManager {
                         .setSampleRate(sampleRate)
                         .setChannelMask(channel)
                         .build())
-                    .setBufferSizeInBytes(bufferSize)
+                        .setBufferSizeInBytes(getPcmBufferSize())
                     .build();
                 
                 Log.d(TAG, "AudioRecord built, checking state...");
@@ -93,8 +89,8 @@ public class MixedAudioMicrophoneManager extends MicrophoneManager {
                     Log.e(TAG, "AudioRecord state: " + internalAudioRecord.getState());
                     throw new IllegalArgumentException("Internal audio record parameters are not valid");
                 }
-                
-                internalPcmBuffer = ByteBuffer.allocateDirect(bufferSize);
+
+                internalPcmBuffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
                 
                 internalAudioPostProcessEffect = new AudioPostProcessEffect(internalAudioRecord.getAudioSessionId());
                 if (echoCanceler) internalAudioPostProcessEffect.enableEchoCanceler();
