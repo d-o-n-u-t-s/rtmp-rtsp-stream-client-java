@@ -259,12 +259,4 @@ public class MixedAudioMicrophoneManager extends MicrophoneManager {
     }
     
     
-    @Override
-    public int getMaxInputSize() {
-        if (internalAudioRecord != null) {
-            // Return the larger of the two buffer sizes
-            return Math.max(super.getMaxInputSize(), internalPcmBuffer.capacity());
-        }
-        return super.getMaxInputSize();
-    }
 }
