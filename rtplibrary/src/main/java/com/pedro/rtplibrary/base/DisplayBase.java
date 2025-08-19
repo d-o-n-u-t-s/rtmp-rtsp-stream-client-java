@@ -677,7 +677,6 @@ public abstract class DisplayBase implements GetAacData, GetVideoData, GetMicrop
         
         if (mediaProjection == null) {
             mediaProjection = mediaProjectionManager.getMediaProjection(resultCode, data);
-            mediaProjection.registerCallback(mediaProjectionStopCallback, null);
         }
         
         AudioPlaybackCaptureConfiguration config =
