@@ -402,10 +402,8 @@ public abstract class DisplayBase implements GetAacData, GetVideoData, GetMicrop
     }
     Surface surface =
         (glInterface != null) ? glInterface.getSurface() : videoEncoder.getInputSurface();
-    if (mediaProjection == null) {
-      mediaProjection = mediaProjectionManager.getMediaProjection(resultCode, data);
+      initializeMediaProjection();
       mediaProjection.registerCallback(mediaProjectionStopCallback, null);
-    }
     if (glInterface != null && videoEncoder.getRotation() == 90
         || videoEncoder.getRotation() == 270) {
       virtualDisplay =
