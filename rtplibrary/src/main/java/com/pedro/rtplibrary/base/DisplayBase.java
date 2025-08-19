@@ -239,9 +239,7 @@ public abstract class DisplayBase implements GetAacData, GetVideoData, GetMicrop
   @RequiresApi(api = Build.VERSION_CODES.Q)
   public boolean prepareInternalAudio(int bitrate, int sampleRate, boolean isStereo,
       boolean echoCanceler, boolean noiseSuppressor) {
-    if (mediaProjection == null) {
-      mediaProjection = mediaProjectionManager.getMediaProjection(resultCode, data);
-    }
+      initializeMediaProjection();
 
     AudioPlaybackCaptureConfiguration config =
         new AudioPlaybackCaptureConfiguration.Builder(mediaProjection).addMatchingUsage(
@@ -416,6 +414,13 @@ public abstract class DisplayBase implements GetAacData, GetVideoData, GetMicrop
     }
     if (audioInitialized) microphoneManager.start();
   }
+
+    private void initializeMediaProjection() {
+        if (mediaProjection == null) {
+            mediaProjection = mediaProjectionManager.getMediaProjection(resultCode, data);
+            mediaProjection.registerCallback(mediaProjectionStopCallback, null);
+        }
+    }
 
   private void resetVideoEncoder() {
     virtualDisplay.setSurface(null);
@@ -673,10 +678,7 @@ public abstract class DisplayBase implements GetAacData, GetVideoData, GetMicrop
         if (!(microphoneManager instanceof MixedAudioMicrophoneManager)) {
             return false;
         }
-        
-        if (mediaProjection == null) {
-            mediaProjection = mediaProjectionManager.getMediaProjection(resultCode, data);
-        }
+        initializeMediaProjection();
         
         AudioPlaybackCaptureConfiguration config =
             new AudioPlaybackCaptureConfiguration.Builder(mediaProjection).addMatchingUsage(
