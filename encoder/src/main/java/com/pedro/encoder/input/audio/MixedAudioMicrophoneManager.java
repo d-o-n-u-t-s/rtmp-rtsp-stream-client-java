@@ -64,6 +64,8 @@ public class MixedAudioMicrophoneManager extends MicrophoneManager {
     
     /**
      * Create AudioRecord for internal audio capture
+     * Notice that you should granted {@link android.Manifest.permission#RECORD_AUDIO} before calling
+     * this!
      */
     private boolean createInternalAudioRecord(AudioPlaybackCaptureConfiguration config,
                                               int sampleRate, boolean isStereo,
