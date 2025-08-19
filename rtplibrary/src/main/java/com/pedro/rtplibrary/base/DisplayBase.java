@@ -670,6 +670,7 @@ public abstract class DisplayBase implements GetAacData, GetVideoData, GetMicrop
      * @param isStereo   true for stereo audio, false for mono
      * @return true if mixed audio microphone was created successfully
      */
+    @RequiresApi(api = Build.VERSION_CODES.Q)
     public boolean createMixedAudioMicrophone(int sampleRate, boolean isStereo, boolean echoCanceler, boolean noiseSuppressor) {
         if (!(microphoneManager instanceof MixedAudioMicrophoneManager)) {
             return false;
