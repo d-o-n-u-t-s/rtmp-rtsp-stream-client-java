@@ -14,9 +14,6 @@ import android.os.Build;
 import android.view.Surface;
 import android.view.SurfaceView;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.annotation.RequiresApi;
 import com.pedro.encoder.Frame;
 import com.pedro.encoder.audio.AudioEncoder;
 import com.pedro.encoder.audio.GetAacData;
@@ -35,12 +32,15 @@ import com.pedro.rtplibrary.util.RecordController;
 import com.pedro.rtplibrary.view.GlInterface;
 import com.pedro.rtplibrary.view.OffScreenGlThread;
 
-import java.io.FileDescriptor;
-
 import net.ossrs.rtmp.MediaProjectionCallback;
 
+import java.io.FileDescriptor;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 
 import static android.content.Context.MEDIA_PROJECTION_SERVICE;
 
@@ -418,7 +418,6 @@ public abstract class DisplayBase implements GetAacData, GetVideoData, GetMicrop
     private void initializeMediaProjection() {
         if (mediaProjection == null) {
             mediaProjection = mediaProjectionManager.getMediaProjection(resultCode, data);
-            mediaProjection.registerCallback(mediaProjectionStopCallback, null);
         }
     }
 
