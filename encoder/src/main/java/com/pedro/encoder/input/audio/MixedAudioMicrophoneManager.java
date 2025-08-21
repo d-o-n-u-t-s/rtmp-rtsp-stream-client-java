@@ -165,9 +165,6 @@ public class MixedAudioMicrophoneManager extends MicrophoneManager {
             // Process mixed audio directly from buffers without unnecessary copies
             byte[] mixedData;
             if (customAudioEffect != null) {
-                // Limit buffers to the actual read size
-                pcmBuffer.limit(frameSize);
-                internalPcmBuffer.limit(frameSize);
                 
                 // Create byte arrays from the limited buffers
                 byte[] micData = new byte[frameSize];
