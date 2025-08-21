@@ -161,16 +161,14 @@ public class MixedAudioMicrophoneManager extends MicrophoneManager {
             
             // Ensure both have the same size
             int frameSize = Math.min(micSize, internalSize);
+            int offsetSize = Math.max(pcmBuffer.arrayOffset(), internalPcmBuffer.arrayOffset());
             
             // Process mixed audio directly from buffers without unnecessary copies
             byte[] mixedData;
             if (customAudioEffect != null) {
                 
-                // Create byte arrays from the limited buffers
-                byte[] micData = new byte[frameSize];
-                byte[] internalData = new byte[frameSize];
-                pcmBuffer.get(micData);
-                internalPcmBuffer.get(internalData);
+                byte[] micData = pcmBuffer.array();
+                byte[] internalData = internalPcmBuffer.array();
                 
                 // Apply muting if needed
                 if (muted) {
@@ -185,11 +183,10 @@ public class MixedAudioMicrophoneManager extends MicrophoneManager {
                 mixedData = customAudioEffect.process(micData, internalData);
             } else {
                 // If no custom effect, just return microphone data
-                mixedData = new byte[frameSize];
-                pcmBuffer.get(mixedData);
+                mixedData = pcmBuffer.array();
             }
             
-            return new Frame(mixedData, 0, mixedData.length);
+            return new Frame(mixedData, offsetSize, frameSize);
             
         } catch (Exception e) {
             Log.e(TAG, "Error reading mixed audio", e);
