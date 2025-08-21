@@ -50,11 +50,7 @@ public class PCMUtil {
   public static byte[] pcmToStereo(byte[] pcm, int channels) {
     int cont = 0;
     for (int i = 0; i < pcm.length; i += channels) {
-      byte channel1 = pcm[i];
-      byte channel2 = pcm[i + 1];
-
-      pcmBufferStereo[cont] = channel1;
-      pcmBufferStereo[cont + 1] = channel2;
+      System.arraycopy(pcm, i, pcmBufferStereo, cont, 2);
       cont += 2;
     }
     return pcmBufferStereo;
