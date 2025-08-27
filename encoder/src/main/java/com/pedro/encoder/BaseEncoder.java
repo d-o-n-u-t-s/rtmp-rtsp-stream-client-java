@@ -9,10 +9,14 @@ import android.os.HandlerThread;
 import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
+
+import com.pedro.encoder.audio.AudioEncoder;
 import com.pedro.encoder.utils.CodecUtil;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+
+import static com.pedro.encoder.input.audio.MicrophoneManager.AUDIO_BUFFERING_SECONDS;
 
 /**
  * Created by pedro on 18/09/19.
@@ -154,7 +158,7 @@ public abstract class BaseEncoder implements EncoderCallback {
       byteBuffer.clear();
       int size = Math.min(frame.getSize(), byteBuffer.remaining());
       byteBuffer.put(frame.getBuffer(), frame.getOffset(), size);
-      long pts = System.nanoTime() / 1000 - presentTimeUs;
+      long pts = this instanceof AudioEncoder ? (long)((double)System.nanoTime() / 1000 - presentTimeUs - AUDIO_BUFFERING_SECONDS * 1000000) : System.nanoTime() / 1000 - presentTimeUs;
       mediaCodec.queueInputBuffer(inBufferIndex, 0, size, pts, 0);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
