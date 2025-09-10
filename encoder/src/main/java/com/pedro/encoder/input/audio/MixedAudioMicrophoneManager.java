@@ -8,9 +8,7 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Log;
-
 import com.pedro.encoder.Frame;
-
 import java.nio.ByteBuffer;
 
 /**
@@ -250,7 +248,5 @@ public class MixedAudioMicrophoneManager extends MicrophoneManager {
         }
         
         Log.i(TAG, "Mixed audio stopped");
-    }
-    
-    
+    }  
 }
