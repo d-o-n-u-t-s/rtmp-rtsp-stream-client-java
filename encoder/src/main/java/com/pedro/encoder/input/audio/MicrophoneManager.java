@@ -23,9 +23,6 @@ public class MicrophoneManager {
   protected AudioRecord audioRecord;
   protected final GetMicrophoneData getMicrophoneData;
   protected ByteBuffer pcmBuffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
-  protected ByteBuffer audioBuffer;
-  protected int audioBufferSize;
-  public static final double AUDIO_BUFFERING_SECONDS = 0.2;
   protected byte[] pcmBufferMuted = new byte[BUFFER_SIZE];
   protected boolean running = false;
   protected boolean created = false;
@@ -169,13 +166,6 @@ public class MicrophoneManager {
       Log.e(TAG, "Error starting, microphone was stopped or not created, "
           + "use createMicrophone() before start()");
     }
-  }
-
-  protected void initAudioBuffer() {
-    int bytesPerSample = audioFormat == AudioFormat.ENCODING_PCM_16BIT ? 2 : 1;
-    int channelCount = channel == AudioFormat.CHANNEL_IN_STEREO ? 2 : 1;
-    audioBufferSize = (int) (AUDIO_BUFFERING_SECONDS * sampleRate * bytesPerSample * channelCount);
-    audioBuffer = ByteBuffer.allocateDirect(audioBufferSize * 2);
   }
 
   public void mute() {
