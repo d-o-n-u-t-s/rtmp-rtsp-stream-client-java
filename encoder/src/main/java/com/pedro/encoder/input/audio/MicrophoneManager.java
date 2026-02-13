@@ -19,19 +19,19 @@ import java.nio.ByteBuffer;
 public class MicrophoneManager {
 
   private final String TAG = "MicrophoneManager";
-  private int BUFFER_SIZE = 0;
+  protected int BUFFER_SIZE = 0;
   protected AudioRecord audioRecord;
-  private final GetMicrophoneData getMicrophoneData;
+  protected final GetMicrophoneData getMicrophoneData;
   protected ByteBuffer pcmBuffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
   protected byte[] pcmBufferMuted = new byte[BUFFER_SIZE];
   protected boolean running = false;
-  private boolean created = false;
+  protected boolean created = false;
   //default parameters for microphone
   private int sampleRate = 32000; //hz
   private final int audioFormat = AudioFormat.ENCODING_PCM_16BIT;
   private int channel = AudioFormat.CHANNEL_IN_STEREO;
   protected boolean muted = false;
-  private AudioPostProcessEffect audioPostProcessEffect;
+  protected AudioPostProcessEffect audioPostProcessEffect;
   protected HandlerThread handlerThread;
   protected CustomAudioEffect customAudioEffect = new NoAudioEffect();
 
@@ -220,7 +220,7 @@ public class MicrophoneManager {
   /**
    * Get PCM buffer size
    */
-  private int getPcmBufferSize() {
+  protected int getPcmBufferSize() {
     BUFFER_SIZE = AudioRecord.getMinBufferSize(sampleRate, channel, audioFormat);
     pcmBuffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
     pcmBufferMuted = new byte[BUFFER_SIZE];
