@@ -63,7 +63,7 @@ internal class TLSSocketFactory : SSLSocketFactory() {
 
   private fun enableTLSOnSocket(socket: Socket): Socket {
     if (socket is SSLSocket) {
-      socket.enabledProtocols = arrayOf("TLSv1.1", "TLSv1.2")
+      socket.enabledProtocols = arrayOf("TLSv1.2")
     }
     return socket
   }
